@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		83D84C4B2F547D4300F36B9E /* exportAIChat Extension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 83D84C4A2F547D4300F36B9E /* exportAIChat Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		83D84C742F547DEC00F36B9E /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 83D84C732F547DE300F36B9E /* README.md */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -53,6 +54,7 @@
 		83D84C342F547D4300F36B9E /* exportAIChatTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = exportAIChatTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		83D84C3E2F547D4300F36B9E /* exportAIChatUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = exportAIChatUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		83D84C4A2F547D4300F36B9E /* exportAIChat Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "exportAIChat Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		83D84C732F547DE300F36B9E /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -130,6 +132,7 @@
 		83D84C112F547D4200F36B9E = {
 			isa = PBXGroup;
 			children = (
+				83D84C732F547DE300F36B9E /* README.md */,
 				83D84C1C2F547D4200F36B9E /* exportAIChat */,
 				83D84C372F547D4300F36B9E /* exportAIChatTests */,
 				83D84C412F547D4300F36B9E /* exportAIChatUITests */,
@@ -297,6 +300,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				83D84C742F547DEC00F36B9E /* README.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
