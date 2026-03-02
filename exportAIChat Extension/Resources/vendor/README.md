@@ -17,7 +17,7 @@ These files are vendored locally for deterministic Safari extension builds.
 ## Upgrade checklist
 
 1. Replace the three files with pinned versions from upstream.
-2. Verify `popup.html` still loads all vendor scripts before `popup.js`.
+2. Verify `ensureMarkdownRuntime()` can successfully load all vendor scripts at runtime.
 3. Validate rendering in workbench for:
    - headings/lists/tables/code fences
    - task lists (`- [ ]`, `- [x]`)
