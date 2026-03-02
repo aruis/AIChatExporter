@@ -1,5 +1,7 @@
+import { createMarkdownRenderer, ensureMarkdownRuntime } from "./markdown_renderer.js";
+
 const ext = globalThis.browser ?? globalThis.chrome;
-const EXPORT_BUILD_TAG = "dbg-20260301-b";
+const EXPORT_BUILD_TAG = "dbg-20260301-c3";
 
 const CHAT_STYLE_OPTIONS = [
   { id: "bubble", label: "气泡卡片" },
@@ -58,7 +60,17 @@ async function collectConversationFromActiveTab() {
     throw new Error("请先切换到 ChatGPT 对话页面");
   }
 
-  const response = await ext.tabs.sendMessage(tab.id, { action: "collect_conversation" });
+  let response;
+  try {
+    response = await ext.tabs.sendMessage(tab.id, { action: "collect_conversation" });
+  } catch (error) {
+    throw new Error("页面脚本未连接，请刷新 ChatGPT 页面后重试");
+  }
+
+  if (!response) {
+    throw new Error("页面未返回对话数据，请刷新页面后重试");
+  }
+
   if (!response?.ok) {
     throw new Error(response?.error || "读取对话失败");
   }
@@ -114,6 +126,12 @@ async function openWorkbenchFromPopup() {
   return "已打开导出工作台";
 }
 
+async function openMarkdownRegressionPage() {
+  const url = ext.runtime.getURL("md-regression.html");
+  await ext.tabs.create({ url });
+  return "已打开 Markdown 回归样例页";
+}
+
 function bindPopupActions() {
   const buttons = [...document.querySelectorAll(".export-btn")];
 
@@ -128,9 +146,16 @@ function bindPopupActions() {
       setPopupStatus("处理中...");
 
       try {
-        const message = action === "export_markdown"
-          ? await exportMarkdownFromPopup()
-          : await openWorkbenchFromPopup();
+        let message = "";
+        if (action === "export_markdown") {
+          message = await exportMarkdownFromPopup();
+        } else if (action === "open_workbench") {
+          message = await openWorkbenchFromPopup();
+        } else if (action === "open_md_regression") {
+          message = await openMarkdownRegressionPage();
+        } else {
+          return;
+        }
         setPopupStatus(message);
       } catch (error) {
         setPopupStatus(error?.message || String(error), true);
@@ -141,44 +166,20 @@ function bindPopupActions() {
   }
 }
 
-function parseCodeBlocks(text) {
-  const escaped = escapeHtml(text);
-  const blocks = [];
-  const codeRegex = /```([\s\S]*?)```/g;
-  let last = 0;
-  let match;
+let markdownRenderer = null;
 
-  while ((match = codeRegex.exec(escaped)) !== null) {
-    const plain = escaped.slice(last, match.index).trim();
-    if (plain) {
-      blocks.push(`<p>${plain.replaceAll("\n", "<br>")}</p>`);
-    }
-
-    const code = cleanText(match[1]);
-    if (code) {
-      blocks.push(`<pre><code>${code}</code></pre>`);
-    }
-
-    last = match.index + match[0].length;
+function renderMarkdownToHtml(input) {
+  if (!markdownRenderer) {
+    markdownRenderer = createMarkdownRenderer();
   }
-
-  const trailing = escaped.slice(last).trim();
-  if (trailing) {
-    blocks.push(`<p>${trailing.replaceAll("\n", "<br>")}</p>`);
-  }
-
-  if (!blocks.length) {
-    return `<p>${escaped.replaceAll("\n", "<br>")}</p>`;
-  }
-
-  return blocks.join("");
+  return markdownRenderer(input || "");
 }
 
 function buildMessageListHtml(messages) {
   return messages.map((item) => {
     const role = item.role === "user" ? "user" : "assistant";
     const badge = role === "user" ? "User" : "Assistant";
-    const body = parseCodeBlocks(item.text || "");
+    const body = renderMarkdownToHtml(item.text || "");
 
     return `
       <article class="eac-msg role-${role}">
@@ -270,13 +271,31 @@ function loadImage(dataUrl) {
   });
 }
 
+function waitForNextFrame() {
+  return new Promise((resolve) => requestAnimationFrame(() => resolve()));
+}
+
+async function setScrollTopAndRead(scrollEl, top) {
+  // Safari behavior can differ between property assignment and scrollTo API.
+  scrollEl.scrollTop = top;
+  if (typeof scrollEl.scrollTo === "function") {
+    try {
+      scrollEl.scrollTo(0, top);
+    } catch {
+      // Ignore and rely on scrollTop fallback.
+    }
+  }
+  await waitForNextFrame();
+  await waitForNextFrame();
+  return Math.max(0, Math.floor(scrollEl.scrollTop));
+}
+
 function buildScrollPositions(totalHeight, viewportHeight) {
   if (totalHeight <= viewportHeight + 2) {
     return [0];
   }
 
-  const overlap = 96;
-  const step = Math.max(180, viewportHeight - overlap);
+  const step = Math.max(1, Math.floor(viewportHeight));
   const maxStart = Math.max(0, totalHeight - viewportHeight);
   const positions = [];
 
@@ -286,6 +305,13 @@ function buildScrollPositions(totalHeight, viewportHeight) {
   positions.push(maxStart);
 
   return [...new Set(positions.map((value) => Math.max(0, Math.floor(value))))];
+}
+
+function getExportInnerBackground(stageClassName) {
+  if (stageClassName.includes("bg-night")) {
+    return "rgb(15, 23, 42)";
+  }
+  return "rgb(255, 255, 255)";
 }
 
 function downloadBlob(blob, filename) {
@@ -304,13 +330,14 @@ async function exportPreviewToPng(data) {
   const stage = qs("wb-stage");
   const stageHeader = qs("wb-stage-header");
   const stageScroll = qs("wb-stage-scroll");
+  const stageInner = stage.querySelector(".eac-stage-inner");
 
   const stageRect = stage.getBoundingClientRect();
   const headerRect = stageHeader.getBoundingClientRect();
   const scrollRect = stageScroll.getBoundingClientRect();
 
   const viewportHeight = stageScroll.clientHeight;
-  const totalHeight = stageScroll.scrollHeight;
+  const totalHeight = Math.max(viewportHeight, stageScroll.scrollHeight);
   const dpr = window.devicePixelRatio || 1;
 
   const outputWidth = Math.max(1, Math.round(stageRect.width * dpr));
@@ -324,15 +351,59 @@ async function exportPreviewToPng(data) {
   const positions = buildScrollPositions(totalHeight, viewportHeight);
   const frames = [];
   const originalTop = stageScroll.scrollTop;
+  const maxScrollable = Math.max(0, stageScroll.scrollHeight - stageScroll.clientHeight);
+  if (maxScrollable <= 2 && stageInner.scrollHeight > stageScroll.clientHeight + 8) {
+    throw new Error(
+      `导出滚动容器异常：client=${stageScroll.clientHeight}, scroll=${stageScroll.scrollHeight}, inner=${stageInner.scrollHeight}`
+    );
+  }
+  const originalInnerStyle = {
+    background: stageInner.style.background,
+    backdropFilter: stageInner.style.backdropFilter,
+    boxShadow: stageInner.style.boxShadow
+  };
+  const stageClassName = stage.className || "";
+  const exportInnerBackground = getExportInnerBackground(stageClassName);
+
+  // Use an opaque export layer to avoid alpha stacking seams between stitched frames.
+  // Keep color aligned with the current theme to reduce preview/export visual drift.
+  stageInner.style.backdropFilter = "none";
+  stageInner.style.boxShadow = "none";
+  stageInner.style.background = exportInnerBackground;
 
   try {
+    let lastRecordedTop = null;
     for (const top of positions) {
-      stageScroll.scrollTop = top;
-      await new Promise((resolve) => setTimeout(resolve, 220));
-      frames.push({ top, dataUrl: await captureVisibleTab() });
+      const actualTop = await setScrollTopAndRead(stageScroll, top);
+      if (top > 0 && maxScrollable > 2 && actualTop === 0) {
+        throw new Error("导出滚动失败：预览区域未发生滚动，请重试");
+      }
+      if (lastRecordedTop !== null && actualTop === lastRecordedTop) {
+        continue;
+      }
+      lastRecordedTop = actualTop;
+      const innerRect = stageInner.getBoundingClientRect();
+      const visibleTop = Math.max(innerRect.top, scrollRect.top);
+      const visibleBottom = Math.min(innerRect.bottom, scrollRect.bottom);
+
+      frames.push({
+        top: actualTop,
+        dataUrl: await captureVisibleTab(),
+        innerLeft: innerRect.left,
+        innerWidth: innerRect.width,
+        visibleTop,
+        visibleBottom
+      });
     }
   } finally {
     stageScroll.scrollTop = originalTop;
+    stageInner.style.background = originalInnerStyle.background;
+    stageInner.style.backdropFilter = originalInnerStyle.backdropFilter;
+    stageInner.style.boxShadow = originalInnerStyle.boxShadow;
+  }
+
+  if (!frames.length) {
+    throw new Error("未获取到可导出的截图帧");
   }
 
   const canvas = document.createElement("canvas");
@@ -344,15 +415,89 @@ async function exportPreviewToPng(data) {
     throw new Error("无法创建画布上下文");
   }
 
+  function paintStageBackground(bgStyle) {
+    if (bgStyle === "night") {
+      const base = context.createLinearGradient(0, 0, 0, outputHeight);
+      base.addColorStop(0, "#0b1220");
+      base.addColorStop(1, "#0b1220");
+      context.fillStyle = base;
+      context.fillRect(0, 0, outputWidth, outputHeight);
+    } else if (bgStyle === "mesh") {
+      const base = context.createLinearGradient(0, 0, 0, outputHeight);
+      base.addColorStop(0, "#eaf6ff");
+      base.addColorStop(1, "#eaf6ff");
+      context.fillStyle = base;
+      context.fillRect(0, 0, outputWidth, outputHeight);
+    } else {
+      context.fillStyle = "#f8fafc";
+      context.fillRect(0, 0, outputWidth, outputHeight);
+    }
+
+    const r1 = context.createRadialGradient(
+      Math.round(outputWidth * 0.2),
+      Math.round(outputHeight * 0.2),
+      10,
+      Math.round(outputWidth * 0.2),
+      Math.round(outputHeight * 0.2),
+      Math.round(outputWidth * 0.5)
+    );
+    if (bgStyle === "night") {
+      r1.addColorStop(0, "rgba(56,189,248,0.20)");
+      r1.addColorStop(1, "rgba(56,189,248,0)");
+    } else if (bgStyle === "mesh") {
+      r1.addColorStop(0, "rgba(20,184,166,0.30)");
+      r1.addColorStop(1, "rgba(20,184,166,0)");
+    } else {
+      r1.addColorStop(0, "rgba(14,116,144,0.10)");
+      r1.addColorStop(1, "rgba(14,116,144,0)");
+    }
+    context.fillStyle = r1;
+    context.fillRect(0, 0, outputWidth, outputHeight);
+
+    const r2 = context.createRadialGradient(
+      Math.round(outputWidth * 0.82),
+      Math.round(outputHeight * 0.14),
+      10,
+      Math.round(outputWidth * 0.82),
+      Math.round(outputHeight * 0.14),
+      Math.round(outputWidth * 0.45)
+    );
+    if (bgStyle === "night") {
+      r2.addColorStop(0, "rgba(99,102,241,0.18)");
+      r2.addColorStop(1, "rgba(99,102,241,0)");
+    } else if (bgStyle === "mesh") {
+      r2.addColorStop(0, "rgba(14,165,233,0.30)");
+      r2.addColorStop(1, "rgba(14,165,233,0)");
+    } else {
+      r2.addColorStop(0, "rgba(15,118,110,0.08)");
+      r2.addColorStop(1, "rgba(15,118,110,0)");
+    }
+    context.fillStyle = r2;
+    context.fillRect(0, 0, outputWidth, outputHeight);
+  }
+
+  const bgStyle = stageClassName.includes("bg-night")
+    ? "night"
+    : stageClassName.includes("bg-mesh")
+      ? "mesh"
+      : "paper";
+  paintStageBackground(bgStyle);
+
   let headerDrawn = false;
-  const sourceX = Math.max(0, Math.round(stageRect.left * dpr));
-  const sourceScrollY = Math.max(0, Math.round(scrollRect.top * dpr));
-  const sourceHeaderY = Math.max(0, Math.round(headerRect.top * dpr));
+  let maxPaintedBottom = outputHeaderHeight;
+  const sourceX = Math.max(0, Math.floor(stageRect.left * dpr));
+  const sourceHeaderY = Math.max(0, Math.floor(headerRect.top * dpr));
 
   for (const frame of frames) {
     const image = await loadImage(frame.dataUrl);
-    const sourceHeight = Math.max(1, Math.round(viewportHeight * dpr));
-    const destY = outputHeaderHeight + Math.max(0, Math.round(frame.top * dpr));
+    const visibleHeight = frame.visibleBottom - frame.visibleTop;
+    const sourceY = Math.max(0, Math.floor(frame.visibleTop * dpr));
+    const sourceInnerX = Math.max(0, Math.floor(frame.innerLeft * dpr));
+    const sourceInnerWidth = Math.max(1, Math.ceil(frame.innerWidth * dpr));
+    const sourceHeight = Math.max(0, Math.ceil(visibleHeight * dpr));
+    const innerOffsetY = frame.visibleTop - scrollRect.top;
+    const destX = Math.max(0, Math.floor((frame.innerLeft - stageRect.left) * dpr));
+    const destY = outputHeaderHeight + Math.max(0, Math.floor((frame.top + innerOffsetY) * dpr));
     const drawHeight = Math.min(sourceHeight, outputHeight - destY);
 
     if (!headerDrawn) {
@@ -370,23 +515,40 @@ async function exportPreviewToPng(data) {
       headerDrawn = true;
     }
 
-    if (drawHeight > 0) {
+    if (drawHeight > 0 && sourceInnerWidth > 0) {
       context.drawImage(
         image,
-        sourceX,
-        sourceScrollY,
-        outputWidth,
+        sourceInnerX,
+        sourceY,
+        sourceInnerWidth,
         drawHeight,
-        0,
+        destX,
         destY,
-        outputWidth,
+        sourceInnerWidth,
         drawHeight
       );
+      const paintedBottom = destY + drawHeight;
+      if (paintedBottom > maxPaintedBottom) {
+        maxPaintedBottom = paintedBottom;
+      }
     }
   }
 
+  const finalHeight = Math.max(outputHeaderHeight + 1, Math.min(outputHeight, maxPaintedBottom));
+  const finalCanvas = finalHeight === outputHeight ? canvas : (() => {
+    const trimmed = document.createElement("canvas");
+    trimmed.width = outputWidth;
+    trimmed.height = finalHeight;
+    const trimmedCtx = trimmed.getContext("2d");
+    if (!trimmedCtx) {
+      throw new Error("无法创建裁剪画布上下文");
+    }
+    trimmedCtx.drawImage(canvas, 0, 0, outputWidth, finalHeight, 0, 0, outputWidth, finalHeight);
+    return trimmed;
+  })();
+
   const blob = await new Promise((resolve, reject) => {
-    canvas.toBlob((result) => {
+    finalCanvas.toBlob((result) => {
       if (!result) {
         reject(new Error("PNG 编码失败"));
         return;
@@ -474,6 +636,8 @@ async function startWorkbenchMode() {
   }
 
   try {
+    await ensureMarkdownRuntime();
+
     const [data, prefs] = await Promise.all([
       loadWorkbenchPayload(sid),
       loadStylePrefs()

@@ -1,0 +1,178 @@
+:root {
+  color-scheme: light;
+  --bg: #f3f6fb;
+  --card: #ffffff;
+  --text: #0f172a;
+  --muted: #64748b;
+  --border: #d7e0ee;
+  --ok: #0f766e;
+  --bad: #b91c1c;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", sans-serif;
+}
+
+.reg-app {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.reg-header h1 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.reg-header p {
+  margin: 6px 0 10px;
+  color: var(--muted);
+}
+
+.reg-actions button {
+  border: 1px solid var(--border);
+  background: var(--card);
+  border-radius: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.assertions {
+  margin: 10px 0 0;
+  padding-left: 1.2em;
+}
+
+.assertions li {
+  margin: 3px 0;
+}
+
+.assertions li.ok {
+  color: var(--ok);
+}
+
+.assertions li.bad {
+  color: var(--bad);
+}
+
+.fixtures {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 12px;
+}
+
+.fixture {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  overflow: hidden;
+}
+
+.fixture h2 {
+  margin: 0;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 15px;
+}
+
+.fixture-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 260px;
+}
+
+.source,
+.rendered {
+  padding: 10px 12px;
+}
+
+.source {
+  border-right: 1px solid var(--border);
+}
+
+.source pre {
+  margin: 0;
+  white-space: pre-wrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.rendered {
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.rendered h1, .rendered h2, .rendered h3, .rendered h4, .rendered h5, .rendered h6 {
+  margin: 0 0 8px;
+}
+
+.rendered p, .rendered ul, .rendered ol, .rendered blockquote, .rendered pre, .rendered table {
+  margin: 0 0 8px;
+}
+
+.rendered blockquote {
+  border-left: 3px solid #94a3b8;
+  padding-left: 10px;
+  color: #334155;
+}
+
+.rendered code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 0.92em;
+  background: rgba(15, 23, 42, 0.08);
+  border-radius: 5px;
+  padding: 1px 5px;
+}
+
+.rendered pre {
+  overflow: auto;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.95);
+  color: #e2e8f0;
+  padding: 10px;
+}
+
+.rendered pre code {
+  background: transparent;
+  padding: 0;
+}
+
+.rendered table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.rendered th,
+.rendered td {
+  border: 1px solid #cbd5e1;
+  padding: 6px 8px;
+  text-align: left;
+}
+
+.rendered .task-list-item {
+  list-style: none;
+}
+
+.rendered .task-list-item input[type="checkbox"] {
+  margin-right: 6px;
+}
+
+@media (max-width: 900px) {
+  .fixture-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .source {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+}
+

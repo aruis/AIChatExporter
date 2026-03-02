@@ -1,5 +1,5 @@
 const ext = globalThis.browser ?? globalThis.chrome;
-const EXPORT_BUILD_TAG = "dbg-20260301-b";
+const EXPORT_BUILD_TAG = "dbg-20260301-c3";
 
 function cleanText(value) {
   return String(value || "")
@@ -28,6 +28,14 @@ function makeExportFilename(extName) {
 }
 
 function getMessageRoots() {
+  const turnNodes = [...document.querySelectorAll("main article[data-turn]")].filter((node) => {
+    const turn = node.getAttribute("data-turn");
+    return turn === "user" || turn === "assistant" || turn === "tool";
+  });
+  if (turnNodes.length >= 2) {
+    return turnNodes;
+  }
+
   const strictNodes = [...document.querySelectorAll("main [data-message-author-role]")];
   if (strictNodes.length >= 2) {
     return strictNodes;
@@ -42,6 +50,11 @@ function getMessageRoots() {
 }
 
 function detectRole(node) {
+  const turnRole = node.getAttribute?.("data-turn");
+  if (turnRole === "user" || turnRole === "assistant" || turnRole === "tool") {
+    return turnRole;
+  }
+
   const withRole = node.closest("[data-message-author-role]") || node;
   const explicitRole = withRole.getAttribute?.("data-message-author-role");
   if (explicitRole === "user" || explicitRole === "assistant" || explicitRole === "tool") {
@@ -56,49 +69,16 @@ function detectRole(node) {
   return "assistant";
 }
 
-function toFencedCode(preNode) {
-  const raw = preNode.innerText || "";
-  const code = raw.trimEnd();
-  if (!code) {
-    return "";
+function getMarkdownSerializer() {
+  const serializer = globalThis.ExportAIChatMarkdownSerializer;
+  if (!serializer || typeof serializer.nodeToMarkdown !== "function") {
+    throw new Error("Markdown 序列化器未就绪，请刷新页面后重试");
   }
-
-  return `\n\n\`\`\`\n${code}\n\`\`\``;
-}
-
-function getPrimaryContentNode(root) {
-  const candidates = [
-    "[data-message-author-role] .markdown",
-    "[data-message-author-role] [class*='prose']",
-    ".markdown",
-    "[class*='prose']"
-  ];
-
-  for (const selector of candidates) {
-    const found = root.querySelector(selector);
-    if (found) {
-      return found;
-    }
-  }
-
-  return root;
-}
-
-function nodeToMarkdown(root) {
-  const contentNode = getPrimaryContentNode(root);
-  const clone = contentNode.cloneNode(true);
-
-  const codeBlocks = [...clone.querySelectorAll("pre")].map(toFencedCode).filter(Boolean);
-  clone.querySelectorAll("pre").forEach((el) => el.remove());
-
-  clone.querySelectorAll("button, nav, svg").forEach((el) => el.remove());
-
-  const text = cleanText(clone.innerText || "");
-  const merged = [text, ...codeBlocks].filter(Boolean).join("\n\n");
-  return cleanText(merged);
+  return serializer;
 }
 
 function extractConversation() {
+  const serializer = getMarkdownSerializer();
   const roots = getMessageRoots();
   if (!roots.length) {
     throw new Error("未识别到对话内容，请在 ChatGPT 会话页面使用");
@@ -107,7 +87,7 @@ function extractConversation() {
   const messages = [];
 
   for (const root of roots) {
-    const text = nodeToMarkdown(root);
+    const text = serializer.nodeToMarkdown(root);
     if (!text) {
       continue;
     }
