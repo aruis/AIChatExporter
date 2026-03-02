@@ -91,6 +91,7 @@
 			explicitFolders = (
 				Resources/_locales,
 				Resources/images,
+				Resources/vendor,
 			);
 			path = "exportAIChat Extension";
 			sourceTree = "<group>";

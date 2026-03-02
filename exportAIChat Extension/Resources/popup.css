@@ -68,13 +68,19 @@ h1 {
 
 body.workbench-mode {
   width: auto;
+  height: 100vh;
   min-height: 100vh;
   background: #eef4f8;
+  overflow: hidden;
 }
 
 .workbench {
   box-sizing: border-box;
+  height: 100vh;
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   padding: 16px;
 }
 
@@ -109,7 +115,12 @@ body.workbench-mode {
 .wb-layout {
   display: grid;
   grid-template-columns: 300px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  align-items: stretch;
   gap: 14px;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
 }
 
 .wb-panel {
@@ -117,6 +128,8 @@ body.workbench-mode {
   border: 1px solid #dbe3f0;
   border-radius: 12px;
   padding: 12px;
+  min-height: 0;
+  overflow: auto;
 }
 
 .wb-group-title {
@@ -182,12 +195,14 @@ body.workbench-mode {
   border: 1px solid #dbe3f0;
   border-radius: 12px;
   overflow: hidden;
-  min-height: 70vh;
+  min-height: 0;
+  height: 100%;
   background: #ffffff;
 }
 
 .eac-stage {
-  height: min(76vh, 920px);
+  height: 100%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", sans-serif;
@@ -213,8 +228,13 @@ body.workbench-mode {
 
 .eac-stage-scroll {
   flex: 1;
+  min-height: 0;
   overflow: auto;
+  overscroll-behavior: contain;
   padding: 24px 0 30px;
+  background-repeat: no-repeat;
+  background-size: 100% 1800px;
+  background-attachment: local;
 }
 
 .eac-stage-inner {
@@ -266,6 +286,85 @@ body.workbench-mode {
   margin-bottom: 0;
 }
 
+.eac-bubble h1,
+.eac-bubble h2,
+.eac-bubble h3,
+.eac-bubble h4,
+.eac-bubble h5,
+.eac-bubble h6 {
+  margin: 0 0 8px;
+  line-height: 1.4;
+}
+
+.eac-bubble h1 {
+  font-size: 1.22em;
+}
+
+.eac-bubble h2 {
+  font-size: 1.14em;
+}
+
+.eac-bubble h3 {
+  font-size: 1.08em;
+}
+
+.eac-bubble ul,
+.eac-bubble ol {
+  margin: 0 0 8px;
+  padding-left: 1.25em;
+}
+
+.eac-bubble li {
+  margin: 2px 0;
+}
+
+.eac-bubble .task-list-item {
+  list-style: none;
+  margin-left: -2px;
+}
+
+.eac-bubble ul.contains-task-list {
+  padding-left: 0.2em;
+}
+
+.eac-bubble .task-list-item label {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.eac-bubble .task-list-item input[type="checkbox"] {
+  margin-top: 0.24em;
+}
+
+.eac-bubble blockquote {
+  margin: 8px 0;
+  padding: 0 0 0 10px;
+  border-left: 3px solid rgba(100, 116, 139, 0.55);
+  color: inherit;
+  opacity: 0.95;
+}
+
+.eac-bubble hr {
+  margin: 10px 0;
+  border: 0;
+  border-top: 1px solid rgba(148, 163, 184, 0.45);
+}
+
+.eac-bubble a {
+  color: #0c4a6e;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.eac-bubble code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 0.92em;
+  background: rgba(15, 23, 42, 0.08);
+  border-radius: 6px;
+  padding: 1px 5px;
+}
+
 .eac-bubble pre {
   margin: 8px 0;
   overflow: auto;
@@ -276,10 +375,49 @@ body.workbench-mode {
   font-size: 12px;
 }
 
+.eac-bubble pre code {
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  color: inherit;
+}
+
+.eac-bubble .md-table-wrap {
+  margin: 8px 0;
+  overflow-x: auto;
+}
+
+.eac-bubble table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.93em;
+}
+
+.eac-bubble th,
+.eac-bubble td {
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  padding: 6px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.eac-bubble th {
+  font-weight: 600;
+  background: rgba(148, 163, 184, 0.12);
+}
+
 .chat-bubble .eac-msg.role-user .eac-bubble {
   background: #0f766e;
   color: #ffffff;
   border-color: #0f766e;
+}
+
+.chat-bubble .eac-msg.role-user .eac-bubble a {
+  color: #eafff7;
+}
+
+.chat-bubble .eac-msg.role-user .eac-bubble code {
+  background: rgba(255, 255, 255, 0.22);
 }
 
 .chat-bubble .eac-msg.role-assistant .eac-bubble {
@@ -323,14 +461,14 @@ body.workbench-mode {
   color: #0f172a;
 }
 
-.bg-paper {
+.bg-paper .eac-stage-scroll {
   background:
     radial-gradient(circle at 15% 10%, rgba(14, 116, 144, 0.08), transparent 45%),
     radial-gradient(circle at 80% 40%, rgba(15, 118, 110, 0.08), transparent 48%),
     #f8fafc;
 }
 
-.bg-mesh {
+.bg-mesh .eac-stage-scroll {
   background:
     radial-gradient(circle at 20% 20%, rgba(20, 184, 166, 0.34), transparent 36%),
     radial-gradient(circle at 80% 15%, rgba(14, 165, 233, 0.32), transparent 40%),
@@ -338,7 +476,7 @@ body.workbench-mode {
     #eaf6ff;
 }
 
-.bg-night {
+.bg-night .eac-stage-scroll {
   background:
     radial-gradient(circle at 10% 10%, rgba(56, 189, 248, 0.24), transparent 28%),
     radial-gradient(circle at 90% 0%, rgba(99, 102, 241, 0.22), transparent 30%),
@@ -365,6 +503,18 @@ body.workbench-mode {
   background: rgba(30, 41, 59, 0.88);
   border-color: rgba(100, 116, 139, 0.64);
   color: #e2e8f0;
+}
+
+.bg-night .eac-bubble a {
+  color: #93c5fd;
+}
+
+.bg-night .eac-bubble code {
+  background: rgba(226, 232, 240, 0.12);
+}
+
+.bg-night .eac-bubble th {
+  background: rgba(148, 163, 184, 0.16);
 }
 
 .bg-night.chat-minimal .eac-msg.role-assistant .eac-bubble,

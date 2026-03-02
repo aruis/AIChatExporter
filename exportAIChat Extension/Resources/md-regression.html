@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Markdown 回归样例</title>
+  <link rel="stylesheet" href="md-regression.css">
+  <script type="module" src="md-regression.js"></script>
+</head>
+<body>
+  <main class="reg-app">
+    <header class="reg-header">
+      <h1>Markdown 回归样例页</h1>
+      <p>用于验证渲染器升级后常见语法的显示是否稳定。</p>
+      <div class="reg-actions">
+        <button id="rerender-btn" type="button">重新渲染</button>
+      </div>
+      <ul id="assertions" class="assertions"></ul>
+    </header>
+    <section id="fixtures" class="fixtures"></section>
+  </main>
+</body>
+</html>
