@@ -3,8 +3,9 @@ export function normalizeNewlines(text) {
 }
 
 let runtimeReadyPromise = null;
+const scriptLoadPromises = new Map();
 
-function waitUntilReady(isReady, timeoutMs = 6000, intervalMs = 40) {
+function waitUntilReady(isReady, timeoutMs = 10000, intervalMs = 40) {
   return new Promise((resolve, reject) => {
     const startedAt = Date.now();
     const timer = setInterval(() => {
@@ -25,8 +26,16 @@ function findScriptBySrc(src) {
   return [...document.querySelectorAll("script")].find((node) => node.src === src) || null;
 }
 
-function loadScript(src, isReady, timeoutMs = 6000) {
-  return new Promise((resolve, reject) => {
+function loadScript(src, isReady, timeoutMs = 10000) {
+  if (isReady()) {
+    return Promise.resolve();
+  }
+
+  if (scriptLoadPromises.has(src)) {
+    return scriptLoadPromises.get(src);
+  }
+
+  const promise = new Promise((resolve, reject) => {
     if (isReady()) {
       resolve();
       return;
@@ -58,6 +67,13 @@ function loadScript(src, isReady, timeoutMs = 6000) {
       }
     }, timeoutMs);
   });
+
+  const guarded = promise.catch((error) => {
+    scriptLoadPromises.delete(src);
+    throw error;
+  });
+  scriptLoadPromises.set(src, guarded);
+  return guarded;
 }
 
 export async function ensureMarkdownRuntime() {
@@ -70,17 +86,26 @@ export async function ensureMarkdownRuntime() {
       const base = new URL("./", import.meta.url);
       await loadScript(new URL("vendor/markdown-it.min.js", base).href, () => typeof globalThis.markdownit === "function");
       await loadScript(
-        new URL("vendor/markdown-it-task-lists.min.js", base).href,
-        () => typeof globalThis.markdownitTaskLists === "function" || typeof globalThis.markdownitTasklist === "function"
-      );
-      await loadScript(
         new URL("vendor/purify.min.js", base).href,
         () => typeof globalThis.DOMPurify?.sanitize === "function"
       );
+      try {
+        await loadScript(
+          new URL("vendor/markdown-it-task-lists.min.js", base).href,
+          () => typeof globalThis.markdownitTaskLists === "function" || typeof globalThis.markdownitTasklist === "function"
+        );
+      } catch {
+        // Task-list plugin is optional; renderer remains functional without it.
+      }
     })();
   }
 
-  await runtimeReadyPromise;
+  try {
+    await runtimeReadyPromise;
+  } catch (error) {
+    runtimeReadyPromise = null;
+    throw error;
+  }
 }
 
 export function createMarkdownRenderer() {

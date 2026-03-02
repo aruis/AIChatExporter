@@ -126,12 +126,6 @@ async function openWorkbenchFromPopup() {
   return "已打开导出工作台";
 }
 
-async function openMarkdownRegressionPage() {
-  const url = ext.runtime.getURL("md-regression.html");
-  await ext.tabs.create({ url });
-  return "已打开 Markdown 回归样例页";
-}
-
 function bindPopupActions() {
   const buttons = [...document.querySelectorAll(".export-btn")];
 
@@ -151,8 +145,6 @@ function bindPopupActions() {
           message = await exportMarkdownFromPopup();
         } else if (action === "open_workbench") {
           message = await openWorkbenchFromPopup();
-        } else if (action === "open_md_regression") {
-          message = await openMarkdownRegressionPage();
         } else {
           return;
         }
