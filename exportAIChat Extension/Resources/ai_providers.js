@@ -19,6 +19,11 @@
       id: "chatgpt",
       name: "ChatGPT",
       urlPatterns: ["chatgpt.com", "chat.openai.com"],
+      assistantIcon: {
+        type: "image",
+        src: "images/providers/chatgpt-logo.svg",
+        alt: "ChatGPT"
+      },
       profile: {
         titleSelectors: ["main h1", "h1"],
         messageRootSelectors: [
@@ -45,17 +50,29 @@
     {
       id: "claude",
       name: "Claude",
-      urlPatterns: ["claude.ai"]
+      urlPatterns: ["claude.ai"],
+      assistantIcon: {
+        type: "monogram",
+        text: "C"
+      }
     },
     {
       id: "gemini",
       name: "Gemini",
-      urlPatterns: ["gemini.google.com", "aistudio.google.com"]
+      urlPatterns: ["gemini.google.com", "aistudio.google.com"],
+      assistantIcon: {
+        type: "monogram",
+        text: "G"
+      }
     },
     {
       id: "perplexity",
       name: "Perplexity",
-      urlPatterns: ["perplexity.ai", "www.perplexity.ai"]
+      urlPatterns: ["perplexity.ai", "www.perplexity.ai"],
+      assistantIcon: {
+        type: "monogram",
+        text: "P"
+      }
     }
   ];
 

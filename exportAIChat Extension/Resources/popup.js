@@ -15,6 +15,11 @@ const BG_STYLE_OPTIONS = [
   { id: "night", label: "深色夜幕" }
 ];
 
+const ASSISTANT_MODE_OPTIONS = [
+  { id: "icon", label: "图标" },
+  { id: "title", label: "标题" }
+];
+
 function qs(id) {
   return document.getElementById(id);
 }
@@ -182,15 +187,58 @@ function renderMarkdownToHtml(input) {
   return markdownRenderer(input || "");
 }
 
-function buildMessageListHtml(messages) {
+function normalizeRoleTitle(value, fallback) {
+  const text = cleanText(value || "");
+  return text ? text.slice(0, 24) : fallback;
+}
+
+function getProviderIconModel(providerId, providerName) {
+  const registry = globalThis.ExportAIChatProviderRegistry;
+  const provider = registry?.getById?.(providerId) || null;
+  const icon = provider?.assistantIcon || null;
+  if (icon?.type === "image" && cleanText(icon.src || "")) {
+    return {
+      type: "image",
+      src: icon.src,
+      alt: cleanText(icon.alt || providerName || "Assistant")
+    };
+  }
+  if (icon?.type === "monogram") {
+    const text = cleanText(icon.text || "").slice(0, 4) || cleanText(providerName || "AI").slice(0, 2) || "AI";
+    return { type: "monogram", text };
+  }
+  const fallback = cleanText(providerName || "AI").slice(0, 2) || "AI";
+  return { type: "monogram", text: fallback };
+}
+
+function renderAssistantIcon(providerId, providerName) {
+  const icon = getProviderIconModel(providerId, providerName);
+  const providerClass = `provider-${escapeHtml(providerId || "unknown")}`;
+  if (icon.type === "image") {
+    const src = ext.runtime.getURL(icon.src);
+    return `<span class="eac-assistant-icon ${providerClass} image-icon"><img src="${escapeHtml(src)}" alt="${escapeHtml(icon.alt)}"></span>`;
+  }
+  return `<span class="eac-assistant-icon ${providerClass}">${escapeHtml(icon.text)}</span>`;
+}
+
+function buildMessageListHtml(messages, state, provider) {
+  const assistantMode = state.assistantMode === "title" ? "title" : "icon";
+  const userTitle = normalizeRoleTitle(state.userTitle, "User");
+  const assistantTitle = normalizeRoleTitle(state.assistantTitle, "Assistant");
   return messages.map((item) => {
     const role = item.role === "user" ? "user" : "assistant";
-    const badge = role === "user" ? "User" : "Assistant";
+    const isAssistantIconMode = role === "assistant" && assistantMode === "icon";
+    const badgeClass = isAssistantIconMode ? "eac-badge is-icon" : "eac-badge";
+    const badgeContent = role === "user"
+      ? escapeHtml(userTitle)
+      : isAssistantIconMode
+        ? renderAssistantIcon(provider?.id || "", provider?.name || "AI")
+        : escapeHtml(assistantTitle);
     const body = renderMarkdownToHtml(item.text || "");
 
     return `
       <article class="eac-msg role-${role}">
-        <div class="eac-badge">${badge}</div>
+        <div class="${badgeClass}">${badgeContent}</div>
         <div class="eac-bubble">${body}</div>
       </article>
     `;
@@ -215,6 +263,17 @@ function renderWorkbenchHtml(data, state) {
         <h3 class="wb-group-title">背景样式</h3>
         <div class="wb-option-row" id="bg-options"></div>
 
+        <h3 class="wb-group-title">角色显示</h3>
+        <div class="wb-option-row" id="assistant-mode-options"></div>
+        <div class="wb-field">
+          <label class="wb-label" for="assistant-title-input">Assistant 标题</label>
+          <input id="assistant-title-input" class="wb-input" type="text" maxlength="24" value="${escapeHtml(state.assistantTitle)}" placeholder="Assistant">
+        </div>
+        <div class="wb-field">
+          <label class="wb-label" for="user-title-input">User 标题</label>
+          <input id="user-title-input" class="wb-input" type="text" maxlength="24" value="${escapeHtml(state.userTitle)}" placeholder="User">
+        </div>
+
         <div class="wb-actions">
           <button class="wb-btn primary" data-action="export_png">导出 PNG</button>
           <button class="wb-btn" data-action="export_pdf">导出 PDF</button>
@@ -231,7 +290,10 @@ function renderWorkbenchHtml(data, state) {
           </div>
           <div class="eac-stage-scroll" id="wb-stage-scroll">
             <div class="eac-stage-inner">
-              ${buildMessageListHtml(data.messages)}
+              ${buildMessageListHtml(data.messages, state, {
+                id: data.providerId,
+                name: data.providerName
+              })}
             </div>
           </div>
         </div>
@@ -618,14 +680,23 @@ async function loadStylePrefs() {
     ? prefs.bgStyle
     : BG_STYLE_OPTIONS[0].id;
 
-  return { chatStyle, bgStyle };
+  const assistantMode = ASSISTANT_MODE_OPTIONS.some((x) => x.id === prefs.assistantMode)
+    ? prefs.assistantMode
+    : ASSISTANT_MODE_OPTIONS[0].id;
+  const assistantTitle = normalizeRoleTitle(prefs.assistantTitle, "Assistant");
+  const userTitle = normalizeRoleTitle(prefs.userTitle, "User");
+
+  return { chatStyle, bgStyle, assistantMode, assistantTitle, userTitle };
 }
 
 async function saveStylePrefs(state) {
   await ext.storage.local.set({
     eac_style_prefs: {
       chatStyle: state.chatStyle,
-      bgStyle: state.bgStyle
+      bgStyle: state.bgStyle,
+      assistantMode: state.assistantMode,
+      assistantTitle: normalizeRoleTitle(state.assistantTitle, "Assistant"),
+      userTitle: normalizeRoleTitle(state.userTitle, "User")
     }
   });
 }
@@ -663,8 +734,10 @@ async function startWorkbenchMode() {
 
       const chatBox = qs("chat-options");
       const bgBox = qs("bg-options");
+      const assistantModeBox = qs("assistant-mode-options");
       fillStyleOptionButtons(chatBox, CHAT_STYLE_OPTIONS, state.chatStyle);
       fillStyleOptionButtons(bgBox, BG_STYLE_OPTIONS, state.bgStyle);
+      fillStyleOptionButtons(assistantModeBox, ASSISTANT_MODE_OPTIONS, state.assistantMode);
 
       for (const btn of chatBox.querySelectorAll(".wb-option")) {
         btn.addEventListener("click", async () => {
@@ -681,6 +754,29 @@ async function startWorkbenchMode() {
           rerender();
         });
       }
+
+      for (const btn of assistantModeBox.querySelectorAll(".wb-option")) {
+        btn.addEventListener("click", async () => {
+          state.assistantMode = btn.dataset.id;
+          await saveStylePrefs(state);
+          rerender();
+        });
+      }
+
+      const assistantTitleInput = qs("assistant-title-input");
+      const userTitleInput = qs("user-title-input");
+
+      assistantTitleInput?.addEventListener("change", async () => {
+        state.assistantTitle = normalizeRoleTitle(assistantTitleInput.value, "Assistant");
+        await saveStylePrefs(state);
+        rerender();
+      });
+
+      userTitleInput?.addEventListener("change", async () => {
+        state.userTitle = normalizeRoleTitle(userTitleInput.value, "User");
+        await saveStylePrefs(state);
+        rerender();
+      });
 
       app.querySelector("[data-action='close_tab']").addEventListener("click", async () => {
         const tab = await getActiveTab();
