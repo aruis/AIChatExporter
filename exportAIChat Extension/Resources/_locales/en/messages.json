@@ -4,7 +4,7 @@
     "description": "The display name for the extension."
   },
   "extension_description": {
-    "message": "Export current ChatGPT conversation to Markdown, PDF, and image.",
+    "message": "Export current AI conversation to Markdown, PDF, and image.",
     "description": "Description of what the extension does."
   }
 }

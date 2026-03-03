@@ -524,8 +524,29 @@ body.workbench-mode {
 }
 
 @media print {
+  html,
+  body,
+  body.workbench-mode {
+    width: auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+  }
+
   body.workbench-mode > *:not(#workbench-app) {
     display: none !important;
+  }
+
+  #workbench-app,
+  .workbench,
+  .wb-layout,
+  .wb-preview {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
   }
 
   .wb-header,
@@ -543,9 +564,13 @@ body.workbench-mode {
 
   .eac-stage {
     height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
   }
 
   .eac-stage-scroll {
+    height: auto !important;
+    max-height: none !important;
     overflow: visible !important;
     padding: 0 !important;
   }
@@ -556,6 +581,7 @@ body.workbench-mode {
     margin: 0 !important;
     box-shadow: none !important;
   }
+
 }
 
 @media (max-width: 960px) {
