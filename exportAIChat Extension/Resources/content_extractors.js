@@ -31,8 +31,33 @@
     return null;
   }
 
+  function readRoleFromSelectors(node, roleSelectors) {
+    for (const row of roleSelectors) {
+      const selector = String(row?.selector || "").trim();
+      const role = row?.role;
+      if (!selector || (role !== "user" && role !== "assistant" && role !== "tool")) {
+        continue;
+      }
+
+      try {
+        if (node.matches?.(selector) || node.closest?.(selector)) {
+          return role;
+        }
+      } catch {
+        // Ignore invalid selector rows and keep evaluating fallback rules.
+      }
+    }
+    return null;
+  }
+
   function detectRole(node, provider) {
     const roleAttrs = provider?.profile?.roleAttributes || ["data-turn", "data-message-author-role"];
+    const roleSelectors = Array.isArray(provider?.profile?.roleSelectors) ? provider.profile.roleSelectors : [];
+    const selectorRole = readRoleFromSelectors(node, roleSelectors);
+    if (selectorRole) {
+      return selectorRole;
+    }
+
     for (const attr of roleAttrs) {
       const direct = readRoleValue(node, attr);
       if (direct) {
