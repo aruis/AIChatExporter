@@ -17,10 +17,15 @@
   },
   "content_scripts": [
     {
-      "js": ["content.js"],
+      "js": [
+        "ai_providers.js",
+        "content_runtime.js",
+        "content_markdown_serializer.js",
+        "content_extractors.js",
+        "content.js"
+      ],
       "matches": [
-        "*://chatgpt.com/*",
-        "*://chat.openai.com/*"
+        "*://*/*"
       ],
       "run_at": "document_idle"
     }

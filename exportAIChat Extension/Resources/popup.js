@@ -36,6 +36,14 @@ function timestampKey() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function getProviderRegistry() {
+  const registry = globalThis.ExportAIChatProviderRegistry;
+  if (!registry || typeof registry.findByUrl !== "function") {
+    throw new Error("Provider 注册表未就绪，请刷新扩展后重试");
+  }
+  return registry;
+}
+
 async function getActiveTab() {
   const tabs = await ext.tabs.query({ active: true, currentWindow: true });
   if (!tabs || !tabs.length) {
@@ -50,21 +58,28 @@ async function getActiveTab() {
   return tab;
 }
 
-function ensureChatgptUrl(url) {
-  return Boolean(url && (url.includes("chatgpt.com") || url.includes("chat.openai.com")));
+function resolveProviderForUrl(url) {
+  const registry = getProviderRegistry();
+  return registry.findByUrl(url || "");
+}
+
+function requireProviderForTab(tab) {
+  const provider = resolveProviderForUrl(tab?.url || "");
+  if (!provider) {
+    throw new Error("当前网站暂不支持导出，请切换到已接入的 AI 对话页面");
+  }
+  return provider;
 }
 
 async function collectConversationFromActiveTab() {
   const tab = await getActiveTab();
-  if (!ensureChatgptUrl(tab.url)) {
-    throw new Error("请先切换到 ChatGPT 对话页面");
-  }
+  const provider = requireProviderForTab(tab);
 
   let response;
   try {
     response = await ext.tabs.sendMessage(tab.id, { action: "collect_conversation" });
   } catch (error) {
-    throw new Error("页面脚本未连接，请刷新 ChatGPT 页面后重试");
+    throw new Error(`页面脚本未连接，请刷新 ${provider.name} 页面后重试`);
   }
 
   if (!response) {
@@ -77,7 +92,9 @@ async function collectConversationFromActiveTab() {
 
   return {
     title: response.title || "chat",
-    messages: response.messages || []
+    messages: response.messages || [],
+    providerId: response.providerId || provider.id,
+    providerName: response.providerName || provider.name
   };
 }
 
@@ -100,16 +117,14 @@ function setPopupBusy(isBusy) {
 
 async function exportMarkdownFromPopup() {
   const tab = await getActiveTab();
-  if (!ensureChatgptUrl(tab.url)) {
-    throw new Error("请先切换到 ChatGPT 对话页面");
-  }
+  const provider = requireProviderForTab(tab);
 
   const response = await ext.tabs.sendMessage(tab.id, { action: "export_markdown" });
   if (!response?.ok) {
     throw new Error(response?.error || "导出失败");
   }
 
-  return response.message || "Markdown 导出成功";
+  return response.message || `${provider.name} Markdown 导出成功`;
 }
 
 async function openWorkbenchFromPopup() {
@@ -212,7 +227,7 @@ function renderWorkbenchHtml(data, state) {
         <div class="eac-stage chat-${state.chatStyle} bg-${state.bgStyle}" id="wb-stage">
           <div class="eac-stage-header" id="wb-stage-header">
             <p class="eac-stage-title">${escapeHtml(data.title)}</p>
-            <p class="eac-stage-sub">Export AI Chat · ${EXPORT_BUILD_TAG}</p>
+            <p class="eac-stage-sub">Export AI Chat · ${escapeHtml(data.providerName || "AI")} · ${EXPORT_BUILD_TAG}</p>
           </div>
           <div class="eac-stage-scroll" id="wb-stage-scroll">
             <div class="eac-stage-inner">
@@ -579,13 +594,15 @@ async function loadWorkbenchPayload(sid) {
   const row = await ext.storage.local.get(sid);
   const data = row?.[sid];
   if (!data) {
-    throw new Error("导出数据已失效，请回到 ChatGPT 页面重新打开工作台");
+    throw new Error("导出数据已失效，请回到 AI 对话页面重新打开工作台");
   }
 
   await ext.storage.local.remove(sid);
   return {
     title: cleanText(data.title || "chat") || "chat",
-    messages: Array.isArray(data.messages) ? data.messages : []
+    messages: Array.isArray(data.messages) ? data.messages : [],
+    providerId: cleanText(data.providerId || "") || "unknown",
+    providerName: cleanText(data.providerName || "") || "AI"
   };
 }
 
@@ -623,7 +640,7 @@ async function startWorkbenchMode() {
   const sid = params.get("sid");
 
   if (!sid) {
-    app.innerHTML = "<div class='wb-panel'>缺少工作台数据，请回到 ChatGPT 页面重新打开。</div>";
+    app.innerHTML = "<div class='wb-panel'>缺少工作台数据，请回到 AI 对话页面重新打开。</div>";
     return;
   }
 

@@ -1,11 +1,11 @@
 # exportAIChat
 
-一个 Safari 插件（Safari Web Extension）项目，用于将当前 ChatGPT 对话导出为多种格式，方便归档、分享与离线阅读。
+一个 Safari 插件（Safari Web Extension）项目，用于将当前 AI 对话导出为多种格式，方便归档、分享与离线阅读。
 
 ## 项目说明（简短）
 
 ### 目标
-在 ChatGPT 页面中，一键导出当前会话为：
+在 AI 对话页面中，一键导出当前会话为：
 - 长截图（PNG）
 - PDF
 - Markdown（`.md`）
@@ -16,6 +16,27 @@
 - 支持中文/英文常见内容场景
 
 ## 开发任务计划
+
+## Provider 扩展（多 AI 平台）
+
+当前已将站点识别与页面结构配置抽象到：
+- `exportAIChat Extension/Resources/ai_providers.js`
+
+内容提取逻辑已拆分为模块化层次：
+- `exportAIChat Extension/Resources/content_runtime.js`（provider/runtime 基础能力）
+- `exportAIChat Extension/Resources/content_markdown_serializer.js`（DOM -> Markdown 序列化）
+- `exportAIChat Extension/Resources/content_extractors.js`（消息提取与 Markdown 组装）
+- `exportAIChat Extension/Resources/content.js`（消息路由与导出编排）
+
+新增平台时，优先只改 provider 配置：
+1. 在 `PROVIDERS` 追加 `{ id, name, urlPatterns, profile }`
+2. 若 DOM 结构接近现有平台，仅补 `profile.messageRootSelectors`、`profile.contentSelectors`
+3. 若需要特殊策略，再在 `content.js` 增加 provider-specific 逻辑（尽量少）
+
+当前默认策略已经支持：
+- 按 URL 自动匹配 provider
+- 按 provider 的选择器提取消息节点与正文节点
+- 按 provider 的角色属性识别 `user/assistant/tool`
 
 ## 当前进度（2026-03-01）
 - 已完成：Popup 双路径入口（Markdown 一键导出 + 排版导出工作台）
