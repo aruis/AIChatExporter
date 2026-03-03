@@ -145,6 +145,17 @@ body.workbench-mode {
   margin-bottom: 12px;
 }
 
+.wb-option-row.compact {
+  margin-bottom: 0;
+  flex-wrap: nowrap;
+}
+
+.wb-inline-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .wb-field {
   margin-bottom: 10px;
 }
@@ -171,6 +182,17 @@ body.workbench-mode {
   outline: none;
   border-color: #0f766e;
   box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.12);
+}
+
+.wb-inline-input {
+  min-width: 140px;
+  flex: 1;
+}
+
+.wb-inline-input:disabled {
+  background: #f1f5f9;
+  color: #64748b;
+  cursor: not-allowed;
 }
 
 .wb-option {
@@ -350,6 +372,11 @@ body.workbench-mode {
 .eac-assistant-icon.provider-gemini {
   background: #2563eb;
   border-color: rgba(37, 99, 235, 0.4);
+}
+
+.eac-assistant-icon.provider-gemini.image-icon {
+  background: #ffffff;
+  border-color: rgba(148, 163, 184, 0.45);
 }
 
 .eac-assistant-icon.provider-perplexity {
@@ -679,6 +706,15 @@ body.workbench-mode {
 @media (max-width: 960px) {
   .wb-layout {
     grid-template-columns: 1fr;
+  }
+
+  .wb-inline-field {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .wb-option-row.compact {
+    flex-wrap: wrap;
   }
 
   .eac-stage-inner {

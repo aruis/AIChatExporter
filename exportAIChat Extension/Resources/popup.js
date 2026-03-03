@@ -192,6 +192,11 @@ function normalizeRoleTitle(value, fallback) {
   return text ? text.slice(0, 24) : fallback;
 }
 
+function normalizeConversationTitle(value, fallback = "chat") {
+  const text = cleanText(value || "");
+  return text ? text.slice(0, 80) : fallback;
+}
+
 function getProviderIconModel(providerId, providerName) {
   const registry = globalThis.ExportAIChatProviderRegistry;
   const provider = registry?.getById?.(providerId) || null;
@@ -250,7 +255,7 @@ function renderWorkbenchHtml(data, state) {
     <header class="wb-header">
       <div>
         <h1>排版导出工作台</h1>
-        <div class="wb-tag">${escapeHtml(data.title)} · ${EXPORT_BUILD_TAG}</div>
+        <div class="wb-tag">${escapeHtml(state.conversationTitle)} · ${EXPORT_BUILD_TAG}</div>
       </div>
       <button class="wb-back" data-action="close_tab">关闭</button>
     </header>
@@ -263,11 +268,18 @@ function renderWorkbenchHtml(data, state) {
         <h3 class="wb-group-title">背景样式</h3>
         <div class="wb-option-row" id="bg-options"></div>
 
-        <h3 class="wb-group-title">角色显示</h3>
-        <div class="wb-option-row" id="assistant-mode-options"></div>
         <div class="wb-field">
-          <label class="wb-label" for="assistant-title-input">Assistant 标题</label>
-          <input id="assistant-title-input" class="wb-input" type="text" maxlength="24" value="${escapeHtml(state.assistantTitle)}" placeholder="Assistant">
+          <label class="wb-label" for="conversation-title-input">对话标题</label>
+          <input id="conversation-title-input" class="wb-input" type="text" maxlength="80" value="${escapeHtml(state.conversationTitle)}" placeholder="chat">
+        </div>
+
+        <h3 class="wb-group-title">角色显示</h3>
+        <div class="wb-field">
+          <label class="wb-label" for="assistant-title-input">Assistant 标识</label>
+          <div class="wb-inline-field">
+            <div class="wb-option-row compact" id="assistant-mode-options"></div>
+            <input id="assistant-title-input" class="wb-input wb-inline-input" type="text" maxlength="24" value="${escapeHtml(state.assistantTitle)}" placeholder="${escapeHtml(state.providerName || "Assistant")}">
+          </div>
         </div>
         <div class="wb-field">
           <label class="wb-label" for="user-title-input">User 标题</label>
@@ -285,7 +297,7 @@ function renderWorkbenchHtml(data, state) {
       <section class="wb-preview" id="wb-preview">
         <div class="eac-stage chat-${state.chatStyle} bg-${state.bgStyle}" id="wb-stage">
           <div class="eac-stage-header" id="wb-stage-header">
-            <p class="eac-stage-title">${escapeHtml(data.title)}</p>
+            <p class="eac-stage-title">${escapeHtml(state.conversationTitle)}</p>
             <p class="eac-stage-sub">Export AI Chat · ${escapeHtml(data.providerName || "AI")} · ${EXPORT_BUILD_TAG}</p>
           </div>
           <div class="eac-stage-scroll" id="wb-stage-scroll">
@@ -395,7 +407,7 @@ function downloadBlob(blob, filename) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-async function exportPreviewToPng(data) {
+async function exportPreviewToPng(data, state) {
   const stage = qs("wb-stage");
   const stageHeader = qs("wb-stage-header");
   const stageScroll = qs("wb-stage-scroll");
@@ -626,7 +638,8 @@ async function exportPreviewToPng(data) {
     }, "image/png");
   });
 
-  downloadBlob(blob, `${data.title}-${EXPORT_BUILD_TAG}.png`);
+  const fileTitle = normalizeConversationTitle(state?.conversationTitle, data.title || "chat");
+  downloadBlob(blob, `${fileTitle}-${EXPORT_BUILD_TAG}.png`);
 }
 
 function waitForPrintEnd(timeoutMs = 1200) {
@@ -668,7 +681,7 @@ async function loadWorkbenchPayload(sid) {
   };
 }
 
-async function loadStylePrefs() {
+async function loadStylePrefs(provider) {
   const row = await ext.storage.local.get("eac_style_prefs");
   const prefs = row?.eac_style_prefs || {};
 
@@ -683,20 +696,33 @@ async function loadStylePrefs() {
   const assistantMode = ASSISTANT_MODE_OPTIONS.some((x) => x.id === prefs.assistantMode)
     ? prefs.assistantMode
     : ASSISTANT_MODE_OPTIONS[0].id;
-  const assistantTitle = normalizeRoleTitle(prefs.assistantTitle, "Assistant");
+  const providerId = cleanText(provider?.id || "") || "unknown";
+  const providerName = normalizeRoleTitle(provider?.name, "Assistant");
+  const assistantTitleMap = typeof prefs.assistantTitlesByProvider === "object" && prefs.assistantTitlesByProvider
+    ? prefs.assistantTitlesByProvider
+    : {};
+  const assistantTitle = normalizeRoleTitle(assistantTitleMap[providerId], providerName);
   const userTitle = normalizeRoleTitle(prefs.userTitle, "User");
 
   return { chatStyle, bgStyle, assistantMode, assistantTitle, userTitle };
 }
 
 async function saveStylePrefs(state) {
+  const row = await ext.storage.local.get("eac_style_prefs");
+  const prev = row?.eac_style_prefs || {};
+  const providerId = cleanText(state.providerId || "") || "unknown";
+  const assistantTitlesByProvider = {
+    ...(typeof prev.assistantTitlesByProvider === "object" && prev.assistantTitlesByProvider ? prev.assistantTitlesByProvider : {}),
+    [providerId]: normalizeRoleTitle(state.assistantTitle, normalizeRoleTitle(state.providerName, "Assistant"))
+  };
+
   await ext.storage.local.set({
     eac_style_prefs: {
       chatStyle: state.chatStyle,
       bgStyle: state.bgStyle,
       assistantMode: state.assistantMode,
-      assistantTitle: normalizeRoleTitle(state.assistantTitle, "Assistant"),
-      userTitle: normalizeRoleTitle(state.userTitle, "User")
+      userTitle: normalizeRoleTitle(state.userTitle, "User"),
+      assistantTitlesByProvider
     }
   });
 }
@@ -718,16 +744,22 @@ async function startWorkbenchMode() {
   try {
     await ensureMarkdownRuntime();
 
-    const [data, prefs] = await Promise.all([
-      loadWorkbenchPayload(sid),
-      loadStylePrefs()
-    ]);
+    const data = await loadWorkbenchPayload(sid);
+    const prefs = await loadStylePrefs({
+      id: data.providerId,
+      name: data.providerName
+    });
 
     if (!data.messages.length) {
       throw new Error("当前对话为空，无法导出");
     }
 
-    const state = { ...prefs };
+    const state = {
+      ...prefs,
+      providerId: data.providerId,
+      providerName: data.providerName,
+      conversationTitle: normalizeConversationTitle(data.title || "chat")
+    };
 
     const rerender = () => {
       app.innerHTML = renderWorkbenchHtml(data, state);
@@ -738,6 +770,12 @@ async function startWorkbenchMode() {
       fillStyleOptionButtons(chatBox, CHAT_STYLE_OPTIONS, state.chatStyle);
       fillStyleOptionButtons(bgBox, BG_STYLE_OPTIONS, state.bgStyle);
       fillStyleOptionButtons(assistantModeBox, ASSISTANT_MODE_OPTIONS, state.assistantMode);
+
+      const conversationTitleInput = qs("conversation-title-input");
+      conversationTitleInput?.addEventListener("change", () => {
+        state.conversationTitle = normalizeConversationTitle(conversationTitleInput.value, "chat");
+        rerender();
+      });
 
       for (const btn of chatBox.querySelectorAll(".wb-option")) {
         btn.addEventListener("click", async () => {
@@ -765,9 +803,12 @@ async function startWorkbenchMode() {
 
       const assistantTitleInput = qs("assistant-title-input");
       const userTitleInput = qs("user-title-input");
+      if (assistantTitleInput) {
+        assistantTitleInput.disabled = state.assistantMode !== "title";
+      }
 
       assistantTitleInput?.addEventListener("change", async () => {
-        state.assistantTitle = normalizeRoleTitle(assistantTitleInput.value, "Assistant");
+        state.assistantTitle = normalizeRoleTitle(assistantTitleInput.value, normalizeRoleTitle(state.providerName, "Assistant"));
         await saveStylePrefs(state);
         rerender();
       });
@@ -787,7 +828,7 @@ async function startWorkbenchMode() {
         setWorkbenchBusy(true);
         setWorkbenchStatus("正在导出 PNG...");
         try {
-          await exportPreviewToPng(data);
+          await exportPreviewToPng(data, state);
           setWorkbenchStatus("PNG 导出成功");
         } catch (error) {
           setWorkbenchStatus(error?.message || String(error), true);
