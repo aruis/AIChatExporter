@@ -1,6 +1,6 @@
 //
 //  ViewController.swift
-//  exportAIChat
+//  AIChatExporter
 //
 //  Created by 牧云踏歌 on 2026/3/1.
 //

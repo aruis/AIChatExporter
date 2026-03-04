@@ -1,13 +1,13 @@
 //
-//  exportAIChatUITestsLaunchTests.swift
-//  exportAIChatUITests
+//  AIChatExporterUITestsLaunchTests.swift
+//  AIChatExporterUITests
 //
 //  Created by 牧云踏歌 on 2026/3/1.
 //
 
 import XCTest
 
-final class exportAIChatUITestsLaunchTests: XCTestCase {
+final class AIChatExporterUITestsLaunchTests: XCTestCase {
 
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
         true

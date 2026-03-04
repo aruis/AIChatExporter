@@ -20,13 +20,13 @@
 ## Provider 扩展（多 AI 平台）
 
 当前已将站点识别与页面结构配置抽象到：
-- `exportAIChat Extension/Resources/ai_providers.js`
+- `AIChatExporter Extension/Resources/ai_providers.js`
 
 内容提取逻辑已拆分为模块化层次：
-- `exportAIChat Extension/Resources/content_runtime.js`（provider/runtime 基础能力）
-- `exportAIChat Extension/Resources/content_markdown_serializer.js`（DOM -> Markdown 序列化）
-- `exportAIChat Extension/Resources/content_extractors.js`（消息提取与 Markdown 组装）
-- `exportAIChat Extension/Resources/content.js`（消息路由与导出编排）
+- `AIChatExporter Extension/Resources/content_runtime.js`（provider/runtime 基础能力）
+- `AIChatExporter Extension/Resources/content_markdown_serializer.js`（DOM -> Markdown 序列化）
+- `AIChatExporter Extension/Resources/content_extractors.js`（消息提取与 Markdown 组装）
+- `AIChatExporter Extension/Resources/content.js`（消息路由与导出编排）
 
 新增平台时，优先只改 provider 配置：
 1. 在 `PROVIDERS` 追加 `{ id, name, urlPatterns, profile }`
