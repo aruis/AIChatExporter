@@ -24,6 +24,8 @@ const ASSISTANT_MODE_OPTIONS = [
 ];
 
 let cachedProStatus = null;
+let cachedProStatusAt = 0;
+const PRO_STATUS_CACHE_TTL_MS = 10 * 1000;
 
 function qs(id) {
   return document.getElementById(id);
@@ -138,7 +140,7 @@ async function exportMarkdownFromPopup() {
 }
 
 async function openWorkbenchFromPopup() {
-  await assertWorkbenchProAccess();
+  await assertWorkbenchProAccess({ forceRefresh: true });
 
   const payload = await collectConversationFromActiveTab();
   if (!payload.messages.length) {
@@ -153,8 +155,10 @@ async function openWorkbenchFromPopup() {
   return "已打开自定义导出样式";
 }
 
-async function queryProStatus() {
-  if (cachedProStatus !== null) {
+async function queryProStatus({ forceRefresh = false } = {}) {
+  const now = Date.now();
+  const cacheValid = (now - cachedProStatusAt) < PRO_STATUS_CACHE_TTL_MS;
+  if (!forceRefresh && cachedProStatus !== null && cacheValid) {
     return cachedProStatus;
   }
 
@@ -166,15 +170,17 @@ async function queryProStatus() {
   try {
     const response = await ext.runtime.sendNativeMessage(NATIVE_APP_ID, { action: "get_pro_status" });
     cachedProStatus = Boolean(response?.ok && response?.isPro);
+    cachedProStatusAt = now;
     return cachedProStatus;
   } catch {
     cachedProStatus = false;
+    cachedProStatusAt = now;
     return cachedProStatus;
   }
 }
 
-async function assertWorkbenchProAccess() {
-  const isPro = await queryProStatus();
+async function assertWorkbenchProAccess({ forceRefresh = false } = {}) {
+  const isPro = await queryProStatus({ forceRefresh });
   if (!isPro) {
     throw new Error(WORKBENCH_PRO_HINT);
   }
@@ -798,7 +804,7 @@ async function startWorkbenchMode() {
 
   try {
     await ensureMarkdownRuntime();
-    await assertWorkbenchProAccess();
+    await assertWorkbenchProAccess({ forceRefresh: true });
 
     const data = await loadWorkbenchPayload(sid);
     const prefs = await loadStylePrefs({
