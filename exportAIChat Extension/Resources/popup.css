@@ -59,6 +59,12 @@ h1 {
   cursor: not-allowed;
 }
 
+.export-btn.is-locked::after {
+  content: " · Pro";
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .status {
   min-height: 18px;
   margin: 10px 2px 0;

@@ -9,7 +9,7 @@ import Cocoa
 import SafariServices
 import WebKit
 
-let extensionBundleIdentifier = "net.ximatai.exportAIChat.Extension"
+let extensionBundleIdentifier = "net.ximatai.aichatexporter.Extension"
 
 class ViewController: NSViewController, WKNavigationDelegate, WKScriptMessageHandler {
 
