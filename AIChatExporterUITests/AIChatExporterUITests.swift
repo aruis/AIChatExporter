@@ -1,13 +1,13 @@
 //
-//  exportAIChatUITests.swift
-//  exportAIChatUITests
+//  AIChatExporterUITests.swift
+//  AIChatExporterUITests
 //
 //  Created by 牧云踏歌 on 2026/3/1.
 //
 
 import XCTest
 
-final class exportAIChatUITests: XCTestCase {
+final class AIChatExporterUITests: XCTestCase {
 
     override func setUpWithError() throws {
         // Put setup code here. This method is called before the invocation of each test method in the class.
