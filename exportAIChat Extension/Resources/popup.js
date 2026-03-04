@@ -2,6 +2,9 @@ import { createMarkdownRenderer, ensureMarkdownRuntime } from "./markdown_render
 
 const ext = globalThis.browser ?? globalThis.chrome;
 const EXPORT_BUILD_TAG = "dbg-20260301-c3";
+const SHOW_BUILD_TAG = new URLSearchParams(location.search).get("debug") === "1";
+const NATIVE_APP_ID = "net.ximatai.aichatexporter";
+const WORKBENCH_PRO_HINT = "自定义导出样式为 Pro 功能，请先完成内购解锁。";
 
 const CHAT_STYLE_OPTIONS = [
   { id: "bubble", label: "气泡卡片" },
@@ -19,6 +22,8 @@ const ASSISTANT_MODE_OPTIONS = [
   { id: "icon", label: "图标" },
   { id: "title", label: "标题" }
 ];
+
+let cachedProStatus = null;
 
 function qs(id) {
   return document.getElementById(id);
@@ -133,9 +138,11 @@ async function exportMarkdownFromPopup() {
 }
 
 async function openWorkbenchFromPopup() {
+  await assertWorkbenchProAccess();
+
   const payload = await collectConversationFromActiveTab();
   if (!payload.messages.length) {
-    throw new Error("对话为空，无法打开导出工作台");
+    throw new Error("对话为空，无法打开自定义导出样式");
   }
 
   const sid = `eac_workbench_${timestampKey()}`;
@@ -143,7 +150,51 @@ async function openWorkbenchFromPopup() {
 
   const url = ext.runtime.getURL(`popup.html?mode=workbench&sid=${encodeURIComponent(sid)}`);
   await ext.tabs.create({ url });
-  return "已打开导出工作台";
+  return "已打开自定义导出样式";
+}
+
+async function queryProStatus() {
+  if (cachedProStatus !== null) {
+    return cachedProStatus;
+  }
+
+  if (!ext?.runtime?.sendNativeMessage) {
+    cachedProStatus = false;
+    return cachedProStatus;
+  }
+
+  try {
+    const response = await ext.runtime.sendNativeMessage(NATIVE_APP_ID, { action: "get_pro_status" });
+    cachedProStatus = Boolean(response?.ok && response?.isPro);
+    return cachedProStatus;
+  } catch {
+    cachedProStatus = false;
+    return cachedProStatus;
+  }
+}
+
+async function assertWorkbenchProAccess() {
+  const isPro = await queryProStatus();
+  if (!isPro) {
+    throw new Error(WORKBENCH_PRO_HINT);
+  }
+}
+
+async function applyWorkbenchProGuard() {
+  const workbenchButton = document.querySelector("[data-action='open_workbench']");
+  if (!workbenchButton) {
+    return;
+  }
+
+  const isPro = await queryProStatus();
+  if (isPro) {
+    workbenchButton.classList.remove("is-locked");
+    workbenchButton.title = "";
+    return;
+  }
+
+  workbenchButton.classList.add("is-locked");
+  workbenchButton.title = WORKBENCH_PRO_HINT;
 }
 
 function bindPopupActions() {
@@ -195,6 +246,10 @@ function normalizeRoleTitle(value, fallback) {
 function normalizeConversationTitle(value, fallback = "chat") {
   const text = cleanText(value || "");
   return text ? text.slice(0, 80) : fallback;
+}
+
+function maybeBuildTagSuffix() {
+  return SHOW_BUILD_TAG ? ` · ${EXPORT_BUILD_TAG}` : "";
 }
 
 function getProviderIconModel(providerId, providerName) {
@@ -255,7 +310,7 @@ function renderWorkbenchHtml(data, state) {
     <header class="wb-header">
       <div>
         <h1>排版导出工作台</h1>
-        <div class="wb-tag">${escapeHtml(state.conversationTitle)} · ${EXPORT_BUILD_TAG}</div>
+        <div class="wb-tag">${escapeHtml(state.conversationTitle)}${maybeBuildTagSuffix()}</div>
       </div>
       <button class="wb-back" data-action="close_tab">关闭</button>
     </header>
@@ -298,7 +353,7 @@ function renderWorkbenchHtml(data, state) {
         <div class="eac-stage chat-${state.chatStyle} bg-${state.bgStyle}" id="wb-stage">
           <div class="eac-stage-header" id="wb-stage-header">
             <p class="eac-stage-title">${escapeHtml(state.conversationTitle)}</p>
-            <p class="eac-stage-sub">Export AI Chat · ${escapeHtml(data.providerName || "AI")} · ${EXPORT_BUILD_TAG}</p>
+            <p class="eac-stage-sub">Export AI Chat · ${escapeHtml(data.providerName || "AI")}${maybeBuildTagSuffix()}</p>
           </div>
           <div class="eac-stage-scroll" id="wb-stage-scroll">
             <div class="eac-stage-inner">
@@ -743,6 +798,7 @@ async function startWorkbenchMode() {
 
   try {
     await ensureMarkdownRuntime();
+    await assertWorkbenchProAccess();
 
     const data = await loadWorkbenchPayload(sid);
     const prefs = await loadStylePrefs({
@@ -857,9 +913,10 @@ async function startWorkbenchMode() {
   }
 }
 
-function startPopupMode() {
+async function startPopupMode() {
   qs("workbench-app").classList.add("hidden");
   qs("popup-app").classList.remove("hidden");
+  await applyWorkbenchProGuard();
   bindPopupActions();
 }
 

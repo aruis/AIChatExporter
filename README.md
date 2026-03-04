@@ -1,4 +1,4 @@
-# exportAIChat
+# AI Chat Exporter
 
 一个 Safari 插件（Safari Web Extension）项目，用于将当前 AI 对话导出为多种格式，方便归档、分享与离线阅读。
 
