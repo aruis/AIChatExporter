@@ -12,7 +12,9 @@
     "512": "images/icon-512.png"
   },
   "background": {
-    "scripts": ["background.js"],
+    "scripts": [
+      "background.js"
+    ],
     "type": "module"
   },
   "content_scripts": [
@@ -34,5 +36,9 @@
     "default_popup": "popup.html",
     "default_icon": "images/toolbar-icon.svg"
   },
-  "permissions": ["activeTab", "tabs", "storage"]
+  "permissions": [
+    "activeTab",
+    "tabs",
+    "storage"
+  ]
 }

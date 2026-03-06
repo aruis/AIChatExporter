@@ -43,3 +43,37 @@ body.state-off :is(.state-on, .state-unknown) {
 button {
     font-size: 1em;
 }
+
+.premium-card {
+    border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+    border-radius: 12px;
+    padding: 16px;
+    min-width: 420px;
+    max-width: 560px;
+}
+
+.premium-card h2 {
+    margin: 0 0 8px;
+    font-size: 1.1rem;
+}
+
+.pro-status {
+    margin: 0 0 8px;
+}
+
+.pro-status.is-error {
+    color: #c62828;
+}
+
+.pro-product {
+    margin: 0 0 12px;
+    opacity: 0.8;
+}
+
+.premium-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
