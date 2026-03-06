@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="AI Chat Exporter toolbar icon">
-  <path fill="#111C24" d="M280 120h364l220 220v360c0 88-72 160-160 160H488l-122 96c-16 13-40 1-40-20V860h-46c-88 0-160-72-160-160V280c0-88 72-160 160-160z"/>
-  <path fill="#F5F7FA" d="M652 128L856 332H652Z"/>
-  <path d="M652 128V332H856L652 128Z" fill="none" stroke="#111C24" stroke-width="12" stroke-linejoin="round"/>
-  <path d="M320 500h340m-120-120l120 120-120 120" fill="none" stroke="#F5F7FA" stroke-width="64" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>
