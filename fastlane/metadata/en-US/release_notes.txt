@@ -1,0 +1,3 @@
+- Updated branding and app identity to AI Chat Exporter
+- Added Pro gating for custom export styles
+- Improved Pro status refresh reliability

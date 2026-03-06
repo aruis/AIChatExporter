@@ -84,3 +84,89 @@
 - 做新导出舞台稳定性回归：不同窗口尺寸、不同缩放比例、超长会话
 - 提升 Markdown 保真度：列表/表格/引用/公式
 - 评估 PDF 程序化导出（替代打印面板）
+
+## Logo 生成（国内供应商适配）
+
+项目新增脚本：`scripts/logo_provider_adapter.py`  
+用途：通过“OpenAI 兼容图片生成接口”统一生成 Logo，可对接国内供应商。
+
+### 1) 通义（Qwen 兼容模式）
+```bash
+export DASHSCOPE_API_KEY='your_key'
+export DASHSCOPE_BASE_URL='https://your-compatible-endpoint/v1'
+export DASHSCOPE_IMAGE_MODEL='your_image_model'
+
+python3 scripts/logo_provider_adapter.py \
+  --provider qwen \
+  --n 4 \
+  --out-dir output/imagegen
+```
+
+### 2) 豆包/Ark（兼容模式）
+```bash
+export ARK_API_KEY='your_key'
+# 可不设置，默认就是官方：
+# https://ark.cn-beijing.volces.com
+export ARK_BASE_URL='https://ark.cn-beijing.volces.com'
+export ARK_IMAGE_MODEL='doubao-seedream-5-0-260128'
+
+python3 scripts/logo_provider_adapter.py \
+  --provider doubao \
+  --size 2K \
+  --response-format url \
+  --sequential-image-generation disabled \
+  --stream false \
+  --watermark true \
+  --n 4 \
+  --out-dir output/imagegen
+```
+
+### 3) 自定义兼容供应商
+```bash
+export IMAGE_API_KEY='your_key'
+export IMAGE_API_BASE_URL='https://your-compatible-endpoint/v1'
+export IMAGE_API_MODEL='your_image_model'
+
+python3 scripts/logo_provider_adapter.py \
+  --provider compatible \
+  --prompt "Design a modern minimal app logo for AIChatExporter" \
+  --n 4
+```
+
+### 说明
+- `doubao` 模式默认请求路径：`https://ark.cn-beijing.volces.com/api/v3/images/generations`
+- 其它兼容模式默认请求路径：`{BASE_URL}/images/generations`
+- 输出默认写入：`output/imagegen/`
+- 可先用 `--dry-run` 检查请求体，不发网络请求
+- 如某供应商字段和 OpenAI 兼容协议不一致，需要按该供应商文档微调脚本
+
+## App Store Connect 元数据维护（fastlane deliver）
+
+已内置最小可用配置：
+- `Gemfile`
+- `fastlane/Appfile`
+- `fastlane/Fastfile`
+- `fastlane/metadata/en-US/*`
+- `fastlane/metadata/zh-Hans/*`
+- `fastlane/api_key.json.example`
+
+### 初始化
+```bash
+bundle install
+cp fastlane/api_key.json.example fastlane/api_key.json
+```
+
+### 从 ASC 拉取现有文案
+```bash
+bundle exec fastlane fetch_metadata api_key_path:fastlane/api_key.json
+```
+
+### 上传本地文案到 ASC（不上传二进制）
+```bash
+bundle exec fastlane sync_metadata api_key_path:fastlane/api_key.json
+```
+
+说明：
+- 当前配置绑定 `app_identifier: net.ximatai.aichatexporter`
+- `apple_id: 6760020874`
+- `fastlane/api_key.json` 已加入 `.gitignore`

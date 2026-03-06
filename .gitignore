@@ -1,0 +1,20 @@
+fastlane/api_key.json
+
+# Bundler local environment
+.bundle/
+vendor/bundle/
+
+# fastlane runtime artifacts
+fastlane/report.xml
+fastlane/Preview.html
+
+# Local generated assets / temp files
+output/
+tmp/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# macOS Finder
+.DS_Store

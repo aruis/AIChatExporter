@@ -1,0 +1,27 @@
+default_platform(:ios)
+
+platform :ios do
+  desc "Upload local metadata to App Store Connect (no binary upload)"
+  lane :sync_metadata do |options|
+    api_key_path = options[:api_key_path] || File.expand_path("api_key.json", __dir__)
+    upload_to_app_store(
+      api_key_path: api_key_path,
+      app_identifier: "net.ximatai.aichatexporter",
+      platform: "osx",
+      skip_binary_upload: true,
+      skip_screenshots: true,
+      skip_metadata: false,
+      metadata_path: "fastlane/metadata",
+      force: true,
+      submit_for_review: false,
+      run_precheck_before_submit: false
+    )
+  end
+
+  desc "Download metadata from App Store Connect"
+  lane :fetch_metadata do |options|
+    api_key_path = options[:api_key_path] || File.expand_path("api_key.json", __dir__)
+    metadata_path = File.expand_path("metadata", __dir__)
+    sh("bundle exec fastlane deliver download_metadata --api_key_path '#{api_key_path}' --app_identifier 'net.ximatai.aichatexporter' --platform 'osx' --metadata_path '#{metadata_path}'")
+  end
+end

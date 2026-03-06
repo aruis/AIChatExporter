@@ -1,0 +1,5 @@
+AI Chat Exporter helps you export AI conversations into clean formats for archiving and sharing.
+
+- Export to PNG, PDF, and Markdown
+- Keep conversation structure readable
+- Great for notes, handoff, and documentation
