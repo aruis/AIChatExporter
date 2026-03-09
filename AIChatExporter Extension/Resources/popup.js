@@ -5,6 +5,7 @@ const EXPORT_BUILD_TAG = "dbg-20260301-c3";
 const SHOW_BUILD_TAG = new URLSearchParams(location.search).get("debug") === "1";
 const NATIVE_APP_ID = "net.ximatai.aichatexporter";
 const WORKBENCH_PRO_HINT = "自定义导出样式为 Pro 功能，请先完成内购解锁。";
+const PRO_BRIDGE_HINT = "无法连接宿主应用，请确认 AIChatExporter 已启动后重试。";
 
 const CHAT_STYLE_OPTIONS = [
   { id: "bubble", label: "气泡卡片" },
@@ -163,19 +164,19 @@ async function queryProStatus({ forceRefresh = false } = {}) {
   }
 
   if (!ext?.runtime?.sendNativeMessage) {
-    cachedProStatus = false;
-    return cachedProStatus;
+    throw new Error(PRO_BRIDGE_HINT);
   }
 
   try {
     const response = await ext.runtime.sendNativeMessage(NATIVE_APP_ID, { action: "get_pro_status" });
+    if (!response?.ok || typeof response?.isPro !== "boolean") {
+      throw new Error(PRO_BRIDGE_HINT);
+    }
     cachedProStatus = Boolean(response?.ok && response?.isPro);
     cachedProStatusAt = now;
     return cachedProStatus;
-  } catch {
-    cachedProStatus = false;
-    cachedProStatusAt = now;
-    return cachedProStatus;
+  } catch (error) {
+    throw new Error(error?.message || PRO_BRIDGE_HINT);
   }
 }
 
@@ -192,15 +193,20 @@ async function applyWorkbenchProGuard({ forceRefresh = false } = {}) {
     return;
   }
 
-  const isPro = await queryProStatus({ forceRefresh });
-  if (isPro) {
-    workbenchButton.classList.remove("is-locked");
-    workbenchButton.title = "";
-    return;
-  }
+  try {
+    const isPro = await queryProStatus({ forceRefresh });
+    if (isPro) {
+      workbenchButton.classList.remove("is-locked");
+      workbenchButton.title = "";
+      return;
+    }
 
-  workbenchButton.classList.add("is-locked");
-  workbenchButton.title = WORKBENCH_PRO_HINT;
+    workbenchButton.classList.add("is-locked");
+    workbenchButton.title = WORKBENCH_PRO_HINT;
+  } catch (error) {
+    workbenchButton.classList.add("is-locked");
+    workbenchButton.title = error?.message || PRO_BRIDGE_HINT;
+  }
 }
 
 function bindPopupActions() {
@@ -230,16 +236,21 @@ function bindPopupActions() {
         const message = error?.message || String(error);
         if (action === "open_workbench" && message === WORKBENCH_PRO_HINT) {
           await applyWorkbenchProGuard({ forceRefresh: true });
-          const isProAfterRefresh = await queryProStatus({ forceRefresh: true });
-          if (isProAfterRefresh) {
-            try {
-              const retryMessage = await openWorkbenchFromPopup();
-              setPopupStatus(retryMessage);
-              return;
-            } catch (retryError) {
-              setPopupStatus(retryError?.message || String(retryError), true);
-              return;
+          try {
+            const isProAfterRefresh = await queryProStatus({ forceRefresh: true });
+            if (isProAfterRefresh) {
+              try {
+                const retryMessage = await openWorkbenchFromPopup();
+                setPopupStatus(retryMessage);
+                return;
+              } catch (retryError) {
+                setPopupStatus(retryError?.message || String(retryError), true);
+                return;
+              }
             }
+          } catch (refreshError) {
+            setPopupStatus(refreshError?.message || String(refreshError), true);
+            return;
           }
         }
         setPopupStatus(message, true);

@@ -72,6 +72,13 @@
     });
   }
 
+  function toSerializableMessages(messages) {
+    return messages.map((item) => ({
+      role: item.role,
+      text: item.text
+    }));
+  }
+
   function readRoleValue(node, attrName) {
     const value = node.getAttribute?.(attrName);
     if (value === "user" || value === "assistant" || value === "tool") {
@@ -156,7 +163,7 @@
 
     return {
       title: runtime.detectTitle(provider),
-      messages: normalizedMessages,
+      messages: toSerializableMessages(normalizedMessages),
       providerId: provider.id,
       providerName: provider.name
     };
