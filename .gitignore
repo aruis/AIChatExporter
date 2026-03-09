@@ -14,3 +14,6 @@ __pycache__/
 
 # macOS Finder
 .DS_Store
+
+# Local Xcode user data
+AIChatExporter.xcodeproj/xcuserdata/
