@@ -1,0 +1,59 @@
+{
+  "appPolicies" : {
+    "eula" : "",
+    "policies" : [
+      {
+        "locale" : "en_US",
+        "policyText" : "",
+        "policyURL" : ""
+      }
+    ]
+  },
+  "identifier" : "AICHATEXP",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "9.99",
+      "familyShareable" : false,
+      "internalID" : "AICHATPR",
+      "localizations" : [
+        {
+          "description" : "Unlock Pro export styles for local testing",
+          "displayName" : "AIChatExporter Pro",
+          "locale" : "en_US"
+        },
+        {
+          "description" : "解锁 Pro 导出样式能力，供本地测试使用",
+          "displayName" : "AIChatExporter Pro（永久）",
+          "locale" : "zh_Hans"
+        }
+      ],
+      "productID" : "net.ximatai.aichatexporter.pro",
+      "referenceName" : "AIChatExporter Pro",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_askToBuyEnabled" : false,
+    "_billingGracePeriodEnabled" : false,
+    "_billingIssuesEnabled" : false,
+    "_disableDialogs" : false,
+    "_failTransactionsEnabled" : false,
+    "_locale" : "zh_Hans",
+    "_renewalBillingIssuesEnabled" : false,
+    "_storefront" : "CHN",
+    "_storeKitErrors" : [
+
+    ],
+    "_timeRate" : 0
+  },
+  "subscriptionGroups" : [
+
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

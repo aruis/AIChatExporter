@@ -29,17 +29,71 @@
       .slice(0, 48);
   }
 
+  function normalizeTitleCandidate(raw, provider) {
+    let text = cleanText(raw || "");
+    if (!text) {
+      return "";
+    }
+
+    const providerName = cleanText(provider?.name || "");
+    if (providerName) {
+      const escaped = providerName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      text = text
+        .replace(new RegExp(`\\s*[-|·:]\\s*${escaped}$`, "i"), "")
+        .replace(new RegExp(`^${escaped}\\s*[-|·:]\\s*`, "i"), "");
+    }
+
+    return cleanText(text);
+  }
+
+  function isGenericTitle(text, provider) {
+    const normalized = cleanText(text).toLowerCase();
+    if (!normalized) {
+      return true;
+    }
+
+    const providerName = cleanText(provider?.name || "").toLowerCase();
+    const genericTitles = new Set([
+      "chat",
+      "new chat",
+      "new conversation",
+      "untitled",
+      "untitled chat",
+      "conversation",
+      "ai conversation",
+      providerName
+    ].filter(Boolean));
+
+    return genericTitles.has(normalized);
+  }
+
   function detectTitle(provider) {
     const selectors = provider?.profile?.titleSelectors || ["main h1", "h1"];
-    let titleNode = null;
+    const candidates = [];
+    const preferDocumentTitle = Boolean(provider?.profile?.preferDocumentTitle);
+
+    const documentTitle = normalizeTitleCandidate(document.title || "", provider);
+    if (documentTitle && preferDocumentTitle) {
+      candidates.push(documentTitle);
+    }
+
     for (const selector of selectors) {
-      titleNode = document.querySelector(selector);
-      if (titleNode) {
-        break;
+      const titleNode = document.querySelector(selector);
+      const text = normalizeTitleCandidate(titleNode?.textContent || "", provider);
+      if (text) {
+        candidates.push(text);
       }
     }
-    const text = cleanText(titleNode?.textContent || document.title || "chat");
-    return sanitizeFilenamePart(text) || "chat";
+
+    if (documentTitle && !preferDocumentTitle) {
+      candidates.push(documentTitle);
+    }
+
+    const bestCandidate = candidates.find((text) => !isGenericTitle(text, provider))
+      || candidates[0]
+      || "chat";
+
+    return sanitizeFilenamePart(bestCandidate) || "chat";
   }
 
   namespace.runtime = {

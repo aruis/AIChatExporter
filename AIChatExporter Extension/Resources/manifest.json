@@ -38,6 +38,7 @@
   },
   "permissions": [
     "activeTab",
+    "nativeMessaging",
     "tabs",
     "storage"
   ]

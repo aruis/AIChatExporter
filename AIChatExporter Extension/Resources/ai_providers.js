@@ -12,7 +12,8 @@
     roleAttributes: ["data-turn", "data-message-author-role"],
     roleSelectors: [],
     userRoleHints: ["you said", "你说", "你:"],
-    markdownHeading: "AI Conversation"
+    markdownHeading: "AI Conversation",
+    disableDefaultArticleFallback: false
   };
 
   const PROVIDERS = [
@@ -45,7 +46,8 @@
         ],
         roleAttributes: ["data-turn", "data-message-author-role"],
         userRoleHints: ["you said", "你说", "你:"],
-        markdownHeading: "ChatGPT Conversation"
+        markdownHeading: "ChatGPT Conversation",
+        preferDocumentTitle: true
       }
     },
     {
@@ -55,6 +57,31 @@
       assistantIcon: {
         type: "monogram",
         text: "C"
+      },
+      profile: {
+        titleSelectors: ["main h1", "header h1", "h1"],
+        messageRootSelectors: [
+          "main [data-testid*='message']",
+          "main [data-testid*='conversation']",
+          "main article"
+        ],
+        minimumMessageCount: 2,
+        contentSelectors: [
+          "[data-testid*='message'] [class*='prose']",
+          "[data-testid*='message'] .markdown",
+          ".markdown",
+          "[class*='prose']",
+          "div[dir='auto']"
+        ],
+        roleAttributes: ["data-role", "data-message-author-role", "data-turn"],
+        roleSelectors: [
+          { selector: "[data-role='human']", role: "user" },
+          { selector: "[data-role='assistant']", role: "assistant" },
+          { selector: "[data-message-author-role='user']", role: "user" },
+          { selector: "[data-message-author-role='assistant']", role: "assistant" }
+        ],
+        userRoleHints: ["you said", "你说", "human"],
+        markdownHeading: "Claude Conversation"
       }
     },
     {
@@ -112,6 +139,33 @@
       assistantIcon: {
         type: "monogram",
         text: "P"
+      },
+      profile: {
+        titleSelectors: ["main h1", "header h1", "h1"],
+        messageRootSelectors: [
+          "main [id^='markdown-content-']",
+          "main [id*='markdown-content-']",
+          "main [data-testid='answer']",
+          "main [data-testid*='answer']",
+          "main article[data-testid*='answer']"
+        ],
+        minimumMessageCount: 1,
+        contentSelectors: [
+          "[id^='markdown-content-']",
+          "[id*='markdown-content-']",
+          "[data-testid*='answer'] .prose",
+          "[data-testid*='answer'] .markdown",
+          "[data-testid*='answer'] [class*='prose']"
+        ],
+        roleAttributes: ["data-role", "data-message-author-role", "data-turn"],
+        roleSelectors: [
+          { selector: "[data-testid*='query']", role: "user" },
+          { selector: "[data-testid*='question']", role: "user" },
+          { selector: "[data-testid*='answer']", role: "assistant" }
+        ],
+        userRoleHints: ["you asked", "你问", "question"],
+        markdownHeading: "Perplexity Conversation",
+        disableDefaultArticleFallback: true
       }
     }
   ];

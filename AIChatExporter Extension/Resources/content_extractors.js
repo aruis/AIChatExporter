@@ -16,11 +16,60 @@
       }
     }
 
-    const fallbackNodes = [...document.querySelectorAll("main article")];
-    if (fallbackNodes.length >= minCount) {
-      return fallbackNodes;
+    const disableDefaultFallback = Boolean(provider?.profile?.disableDefaultArticleFallback);
+    if (!disableDefaultFallback) {
+      const fallbackNodes = [...document.querySelectorAll("main article")];
+      if (fallbackNodes.length >= minCount) {
+        return fallbackNodes;
+      }
+    }
+
+    if (provider?.id === "perplexity") {
+      const perplexityRoots = [...document.querySelectorAll("main [id^='markdown-content-']")];
+      if (perplexityRoots.length >= 1) {
+        return perplexityRoots;
+      }
     }
     return [];
+  }
+
+  function isPerplexityFollowUpNode(node) {
+    if (!(node instanceof Element)) {
+      return false;
+    }
+
+    const selectors = [
+      "[data-testid*='related']",
+      "[data-testid*='follow']",
+      "[data-testid*='suggest']",
+      "[aria-label*='Follow-up']",
+      "[aria-label*='Related']"
+    ];
+
+    if (selectors.some((selector) => node.matches?.(selector) || node.closest?.(selector))) {
+      return true;
+    }
+
+    const text = runtime.cleanText(node.innerText || node.textContent || "");
+    const shortText = text.slice(0, 64);
+    return shortText === "后续提问" || shortText === "Follow-up questions";
+  }
+
+  function postProcessMessages(messages, provider) {
+    if (provider?.id !== "perplexity") {
+      return messages;
+    }
+
+    return messages.filter((item) => {
+      const text = String(item?.text || "").trim();
+      if (!text) {
+        return false;
+      }
+      if (isPerplexityFollowUpNode(item?.root)) {
+        return false;
+      }
+      return true;
+    });
   }
 
   function readRoleValue(node, attrName) {
@@ -94,17 +143,20 @@
       }
       messages.push({
         role: detectRole(root, provider),
-        text
+        text,
+        root
       });
     }
 
-    if (!messages.length) {
+    const normalizedMessages = postProcessMessages(messages, provider);
+
+    if (!normalizedMessages.length) {
       throw new Error("对话为空，无法导出");
     }
 
     return {
       title: runtime.detectTitle(provider),
-      messages,
+      messages: normalizedMessages,
       providerId: provider.id,
       providerName: provider.name
     };

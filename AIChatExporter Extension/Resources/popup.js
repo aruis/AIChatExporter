@@ -186,13 +186,13 @@ async function assertWorkbenchProAccess({ forceRefresh = false } = {}) {
   }
 }
 
-async function applyWorkbenchProGuard() {
+async function applyWorkbenchProGuard({ forceRefresh = false } = {}) {
   const workbenchButton = document.querySelector("[data-action='open_workbench']");
   if (!workbenchButton) {
     return;
   }
 
-  const isPro = await queryProStatus();
+  const isPro = await queryProStatus({ forceRefresh });
   if (isPro) {
     workbenchButton.classList.remove("is-locked");
     workbenchButton.title = "";
@@ -227,7 +227,22 @@ function bindPopupActions() {
         }
         setPopupStatus(message);
       } catch (error) {
-        setPopupStatus(error?.message || String(error), true);
+        const message = error?.message || String(error);
+        if (action === "open_workbench" && message === WORKBENCH_PRO_HINT) {
+          await applyWorkbenchProGuard({ forceRefresh: true });
+          const isProAfterRefresh = await queryProStatus({ forceRefresh: true });
+          if (isProAfterRefresh) {
+            try {
+              const retryMessage = await openWorkbenchFromPopup();
+              setPopupStatus(retryMessage);
+              return;
+            } catch (retryError) {
+              setPopupStatus(retryError?.message || String(retryError), true);
+              return;
+            }
+          }
+        }
+        setPopupStatus(message, true);
       } finally {
         setPopupBusy(false);
       }
@@ -922,7 +937,7 @@ async function startWorkbenchMode() {
 async function startPopupMode() {
   qs("workbench-app").classList.add("hidden");
   qs("popup-app").classList.remove("hidden");
-  await applyWorkbenchProGuard();
+  await applyWorkbenchProGuard({ forceRefresh: true });
   bindPopupActions();
 }
 
