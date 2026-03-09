@@ -38,6 +38,12 @@
 - 按 provider 的选择器提取消息节点与正文节点
 - 按 provider 的角色属性识别 `user/assistant/tool`
 
+### 当前平台状态（以 `ai_providers.js` 与手工验证为准）
+- ChatGPT：已接入（`chatgpt.com`、`chat.openai.com`）
+- Claude：已接入（`claude.ai`），需继续回归验证
+- Gemini：已接入（`gemini.google.com`、`aistudio.google.com`）
+- Perplexity：已验证可用（`perplexity.ai`、`www.perplexity.ai`）
+
 ## 当前进度（2026-03-01）
 - 已完成：Popup 双路径入口（Markdown 一键导出 + 排版导出工作台）
 - 已完成：Markdown 导出（可直接下载 `.md`）
