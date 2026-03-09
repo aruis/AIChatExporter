@@ -1,0 +1,17 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="iconGradientLucide" x1="114" y1="114" x2="398" y2="398" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F1822"/>
+      <stop offset="1" stop-color="#0B2238"/>
+    </linearGradient>
+    <filter id="iconShadowLucide" x="90" y="82" width="332" height="386" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#08131F" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+  <g filter="url(#iconShadowLucide)">
+    <path d="M170 114H342L398 170V342C398 372.928 372.928 398 342 398H241L183.8 444.5C175.9 450.8 164.5 445.2 164.5 435.1V391.5C135.8 382.4 114 356.6 114 322V170C114 139.072 139.072 114 170 114Z" fill="url(#iconGradientLucide)"/>
+    <path d="M342 114V154C342 162.837 349.163 170 358 170H398L342 114Z" fill="white"/>
+    <path d="M202 256H322" stroke="white" stroke-width="22" stroke-linecap="round"/>
+    <path d="M288 218L326 256L288 294" stroke="white" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

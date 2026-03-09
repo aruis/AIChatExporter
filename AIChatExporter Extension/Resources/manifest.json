@@ -34,7 +34,7 @@
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_icon": "images/icon-64.png"
+    "default_icon": "images/icon.svg"
   },
   "permissions": [
     "activeTab",
