@@ -1,3 +1,3 @@
-- 完成 AI Chat Exporter 品牌统一
-- 增加 Pro 自定义导出样式门禁
-- 优化 Pro 状态刷新与稳定性
+- 品牌名称统一为 AI Chat Exporter
+- 新增 Pro 自定义导出样式能力
+- 优化 Pro 状态刷新逻辑，提升稳定性

@@ -1,1 +1,1 @@
-ai,对话,导出,pdf,png,markdown
+ai,聊天记录,对话导出,pdf,png,markdown,归档,笔记,知识沉淀,分享

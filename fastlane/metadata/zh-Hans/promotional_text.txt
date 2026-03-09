@@ -1,1 +1,1 @@
-一键导出 AI 对话，沉淀高质量内容。
+兼容 ChatGPT、Gemini、Perplexity，一键导出 AI 对话为 PNG、PDF、Markdown。
