@@ -137,12 +137,22 @@
       name: "Perplexity",
       urlPatterns: ["perplexity.ai", "www.perplexity.ai"],
       assistantIcon: {
-        type: "monogram",
-        text: "P"
+        type: "image",
+        src: "images/providers/perplexity-logo.ico",
+        alt: "Perplexity"
       },
       profile: {
-        titleSelectors: ["main h1", "header h1", "h1"],
+        titleSelectors: [
+          "main h1.group\\/query span",
+          "main h1.group\\/query",
+          "main h1",
+          "header h1",
+          "h1"
+        ],
         messageRootSelectors: [
+          "main div.bg-subtle.rounded-2xl.flex.items-center.justify-center > span.select-text.break-words, main [id^='markdown-content-'], main [id*='markdown-content-']",
+          "main h1.group\\/query span, main [id^='markdown-content-'], main [id*='markdown-content-']",
+          "main h1[class*='group/query'] span, main [id^='markdown-content-'], main [id*='markdown-content-']",
           "main [id^='markdown-content-']",
           "main [id*='markdown-content-']",
           "main [data-testid='answer']",
@@ -159,13 +169,17 @@
         ],
         roleAttributes: ["data-role", "data-message-author-role", "data-turn"],
         roleSelectors: [
+          { selector: "div.bg-subtle.rounded-2xl.flex.items-center.justify-center > span.select-text.break-words", role: "user" },
+          { selector: "h1.group\\/query span", role: "user" },
+          { selector: "h1[class*='group/query'] span", role: "user" },
           { selector: "[data-testid*='query']", role: "user" },
           { selector: "[data-testid*='question']", role: "user" },
           { selector: "[data-testid*='answer']", role: "assistant" }
         ],
         userRoleHints: ["you asked", "你问", "question"],
         markdownHeading: "Perplexity Conversation",
-        disableDefaultArticleFallback: true
+        disableDefaultArticleFallback: true,
+        preferDocumentTitle: true
       }
     }
   ];
