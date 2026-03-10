@@ -1,9 +1,12 @@
 (function attachProviderRegistry(global) {
   const DEFAULT_PROVIDER_PROFILE = {
+    titleStrategy: "selectors-first",
     titleSelectors: ["main h1", "h1"],
     messageRootSelectors: ["main article"],
+    userMessageSelectors: [],
+    assistantMessageSelectors: [],
     minimumMessageCount: 2,
-    contentSelectors: [
+    contentRootSelectors: [
       ".text-message .whitespace-pre-wrap",
       ".markdown",
       "[class*='prose']",
@@ -27,6 +30,7 @@
         alt: "ChatGPT"
       },
       profile: {
+        titleStrategy: "document-first",
         titleSelectors: ["main h1", "h1"],
         messageRootSelectors: [
           "main article[data-turn]",
@@ -34,7 +38,7 @@
           "main article"
         ],
         minimumMessageCount: 2,
-        contentSelectors: [
+        contentRootSelectors: [
           "[data-message-author-role] .text-message .whitespace-pre-wrap",
           ".text-message .whitespace-pre-wrap",
           "[data-message-author-role] .markdown",
@@ -46,8 +50,7 @@
         ],
         roleAttributes: ["data-turn", "data-message-author-role"],
         userRoleHints: ["you said", "你说", "你:"],
-        markdownHeading: "ChatGPT Conversation",
-        preferDocumentTitle: true
+        markdownHeading: "ChatGPT Conversation"
       }
     },
     {
@@ -55,8 +58,9 @@
       name: "Claude",
       urlPatterns: ["claude.ai"],
       assistantIcon: {
-        type: "monogram",
-        text: "C"
+        type: "image",
+        src: "images/providers/claude-logo.svg",
+        alt: "Claude"
       },
       profile: {
         titleSelectors: ["main h1", "header h1", "h1"],
@@ -66,7 +70,7 @@
           "main article"
         ],
         minimumMessageCount: 2,
-        contentSelectors: [
+        contentRootSelectors: [
           "[data-testid*='message'] [class*='prose']",
           "[data-testid*='message'] .markdown",
           ".markdown",
@@ -108,7 +112,7 @@
           "main article"
         ],
         minimumMessageCount: 2,
-        contentSelectors: [
+        contentRootSelectors: [
           ".model-response-text .markdown",
           ".response-content .markdown",
           ".query-text",
@@ -142,6 +146,7 @@
         alt: "Perplexity"
       },
       profile: {
+        titleStrategy: "document-first",
         titleSelectors: [
           "main h1.group\\/query span",
           "main h1.group\\/query",
@@ -149,10 +154,19 @@
           "header h1",
           "h1"
         ],
+        userMessageSelectors: [
+          "main div.bg-subtle.rounded-2xl.flex.items-center.justify-center > span.select-text.break-words",
+          "main h1.group\\/query span",
+          "main h1[class*='group/query'] span"
+        ],
+        assistantMessageSelectors: [
+          "main [id^='markdown-content-']",
+          "main [id*='markdown-content-']",
+          "main [data-testid='answer']",
+          "main [data-testid*='answer']",
+          "main article[data-testid*='answer']"
+        ],
         messageRootSelectors: [
-          "main div.bg-subtle.rounded-2xl.flex.items-center.justify-center > span.select-text.break-words, main [id^='markdown-content-'], main [id*='markdown-content-']",
-          "main h1.group\\/query span, main [id^='markdown-content-'], main [id*='markdown-content-']",
-          "main h1[class*='group/query'] span, main [id^='markdown-content-'], main [id*='markdown-content-']",
           "main [id^='markdown-content-']",
           "main [id*='markdown-content-']",
           "main [data-testid='answer']",
@@ -160,7 +174,7 @@
           "main article[data-testid*='answer']"
         ],
         minimumMessageCount: 1,
-        contentSelectors: [
+        contentRootSelectors: [
           "[id^='markdown-content-']",
           "[id*='markdown-content-']",
           "[data-testid*='answer'] .prose",
@@ -178,8 +192,7 @@
         ],
         userRoleHints: ["you asked", "你问", "question"],
         markdownHeading: "Perplexity Conversation",
-        disableDefaultArticleFallback: true,
-        preferDocumentTitle: true
+        disableDefaultArticleFallback: true
       }
     }
   ];
@@ -195,11 +208,17 @@
   }
 
   function normalizeProvider(provider) {
+    const rawProfile = provider.profile || {};
+    const titleStrategy = rawProfile.titleStrategy
+      || (rawProfile.preferDocumentTitle ? "document-first" : DEFAULT_PROVIDER_PROFILE.titleStrategy);
+
     return {
       ...provider,
       profile: {
         ...DEFAULT_PROVIDER_PROFILE,
-        ...(provider.profile || {})
+        ...rawProfile,
+        titleStrategy,
+        contentRootSelectors: rawProfile.contentRootSelectors || rawProfile.contentSelectors || DEFAULT_PROVIDER_PROFILE.contentRootSelectors
       }
     };
   }

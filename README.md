@@ -30,13 +30,50 @@
 
 新增平台时，优先只改 provider 配置：
 1. 在 `PROVIDERS` 追加 `{ id, name, urlPatterns, profile }`
-2. 若 DOM 结构接近现有平台，仅补 `profile.messageRootSelectors`、`profile.contentSelectors`
+2. 若 DOM 结构接近现有平台，仅补 `profile.messageRootSelectors`、`profile.contentRootSelectors`
 3. 若需要特殊策略，再在 `content.js` 增加 provider-specific 逻辑（尽量少）
+
+推荐优先使用的 profile 字段：
+- `titleStrategy`
+  - `selectors-first`
+  - `document-first`
+  - `document-only`
+- `titleSelectors`
+- `userMessageSelectors`
+- `assistantMessageSelectors`
+- `messageRootSelectors`
+  - 当 user / assistant 无法稳定拆开时再用
+- `contentRootSelectors`
+- `roleAttributes`
+- `roleSelectors`
+- `userRoleHints`
 
 当前默认策略已经支持：
 - 按 URL 自动匹配 provider
-- 按 provider 的选择器提取消息节点与正文节点
+- 按 provider 的选择器提取标题、消息节点与正文节点
 - 按 provider 的角色属性识别 `user/assistant/tool`
+
+### Provider 图标维护
+
+provider 图标统一落本地资源目录：
+- `AIChatExporter Extension/Resources/images/providers/`
+
+同步脚本：
+- `scripts/sync_provider_icons.py`
+
+用途：
+- 从社区维护的品牌资源拉取 SVG
+- 保持扩展继续使用本地静态资源，不依赖运行时 CDN
+
+执行方式：
+```bash
+python3 scripts/sync_provider_icons.py
+```
+
+仅同步单个 provider：
+```bash
+python3 scripts/sync_provider_icons.py --provider perplexity
+```
 
 ### 当前平台状态（以 `ai_providers.js` 与手工验证为准）
 - ChatGPT：已接入（`chatgpt.com`、`chat.openai.com`）

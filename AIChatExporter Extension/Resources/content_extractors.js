@@ -3,31 +3,90 @@
   const runtime = namespace.runtime;
   const serializer = namespace.serializer;
 
+  function sortNodesInDocumentOrder(nodes) {
+    return [...nodes].sort((left, right) => {
+      if (left === right) {
+        return 0;
+      }
+      const position = left.compareDocumentPosition(right);
+      if (position & Node.DOCUMENT_POSITION_FOLLOWING) {
+        return -1;
+      }
+      if (position & Node.DOCUMENT_POSITION_PRECEDING) {
+        return 1;
+      }
+      return 0;
+    });
+  }
+
+  function collectNodesBySelectors(selectors) {
+    const unique = new Set();
+    for (const selector of selectors || []) {
+      if (!selector) {
+        continue;
+      }
+      try {
+        document.querySelectorAll(selector).forEach((node) => unique.add(node));
+      } catch {
+        // Ignore invalid selectors in provider config.
+      }
+    }
+    return sortNodesInDocumentOrder(unique);
+  }
+
+  function getExplicitMessageRoots(provider) {
+    const userNodes = collectNodesBySelectors(provider?.profile?.userMessageSelectors);
+    const assistantNodes = collectNodesBySelectors(provider?.profile?.assistantMessageSelectors);
+    const total = userNodes.length + assistantNodes.length;
+    const minCount = Number.isFinite(provider?.profile?.minimumMessageCount)
+      ? provider.profile.minimumMessageCount
+      : 2;
+
+    if (!total || total < minCount) {
+      return [];
+    }
+
+    const roleMap = new Map();
+    userNodes.forEach((node) => roleMap.set(node, "user"));
+    assistantNodes.forEach((node) => roleMap.set(node, "assistant"));
+
+    const nodes = sortNodesInDocumentOrder(new Set([...userNodes, ...assistantNodes]));
+    return nodes.map((node) => ({
+      node,
+      role: roleMap.get(node) || null
+    }));
+  }
+
   function getMessageRoots(provider) {
+    const explicitRoots = getExplicitMessageRoots(provider);
+    if (explicitRoots.length) {
+      return explicitRoots;
+    }
+
     const selectors = provider?.profile?.messageRootSelectors || ["main article"];
     const minCount = Number.isFinite(provider?.profile?.minimumMessageCount)
       ? provider.profile.minimumMessageCount
       : 2;
 
     for (const selector of selectors) {
-      const nodes = [...document.querySelectorAll(selector)];
+      const nodes = collectNodesBySelectors([selector]);
       if (nodes.length >= minCount) {
-        return nodes;
+        return nodes.map((node) => ({ node, role: null }));
       }
     }
 
     const disableDefaultFallback = Boolean(provider?.profile?.disableDefaultArticleFallback);
     if (!disableDefaultFallback) {
-      const fallbackNodes = [...document.querySelectorAll("main article")];
+      const fallbackNodes = collectNodesBySelectors(["main article"]);
       if (fallbackNodes.length >= minCount) {
-        return fallbackNodes;
+        return fallbackNodes.map((node) => ({ node, role: null }));
       }
     }
 
     if (provider?.id === "perplexity") {
-      const perplexityRoots = [...document.querySelectorAll("main [id^='markdown-content-']")];
+      const perplexityRoots = collectNodesBySelectors(["main [id^='markdown-content-']"]);
       if (perplexityRoots.length >= 1) {
-        return perplexityRoots;
+        return perplexityRoots.map((node) => ({ node, role: "assistant" }));
       }
     }
     return [];
@@ -106,7 +165,11 @@
     return null;
   }
 
-  function detectRole(node, provider) {
+  function detectRole(node, provider, preferredRole = null) {
+    if (preferredRole === "user" || preferredRole === "assistant" || preferredRole === "tool") {
+      return preferredRole;
+    }
+
     const roleAttrs = provider?.profile?.roleAttributes || ["data-turn", "data-message-author-role"];
     const roleSelectors = Array.isArray(provider?.profile?.roleSelectors) ? provider.profile.roleSelectors : [];
     const selectorRole = readRoleFromSelectors(node, roleSelectors);
@@ -143,13 +206,14 @@
     }
 
     const messages = [];
-    for (const root of roots) {
+    for (const item of roots) {
+      const root = item?.node || item;
       const text = serializer.nodeToMarkdown(root, provider);
       if (!text) {
         continue;
       }
       messages.push({
-        role: detectRole(root, provider),
+        role: detectRole(root, provider, item?.role || null),
         text,
         root
       });

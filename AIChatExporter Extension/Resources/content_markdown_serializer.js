@@ -26,7 +26,9 @@
   }
 
   function getPrimaryContentNode(root, provider) {
-    const candidates = provider?.profile?.contentSelectors || [
+    const candidates = provider?.profile?.contentRootSelectors
+      || provider?.profile?.contentSelectors
+      || [
       ".text-message .whitespace-pre-wrap",
       ".markdown",
       "[class*='prose']",
