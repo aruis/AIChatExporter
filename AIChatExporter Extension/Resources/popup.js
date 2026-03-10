@@ -84,6 +84,23 @@ function requireProviderForTab(tab) {
   return provider;
 }
 
+async function showProviderDebugStatus() {
+  if (!SHOW_BUILD_TAG) {
+    return;
+  }
+
+  try {
+    const tab = await getActiveTab();
+    const provider = resolveProviderForUrl(tab?.url || "");
+    const message = provider
+      ? `debug: ${provider.id} <- ${tab?.url || ""}`
+      : `debug: no-provider <- ${tab?.url || ""}`;
+    setPopupStatus(message, !provider);
+  } catch (error) {
+    setPopupStatus(`debug: ${error?.message || String(error)}`, true);
+  }
+}
+
 async function collectConversationFromActiveTab() {
   const tab = await getActiveTab();
   const provider = requireProviderForTab(tab);
@@ -948,6 +965,7 @@ async function startWorkbenchMode() {
 async function startPopupMode() {
   qs("workbench-app").classList.add("hidden");
   qs("popup-app").classList.remove("hidden");
+  await showProviderDebugStatus();
   await applyWorkbenchProGuard({ forceRefresh: true });
   bindPopupActions();
 }
