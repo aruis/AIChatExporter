@@ -70,22 +70,24 @@
   function detectTitle(provider) {
     const selectors = provider?.profile?.titleSelectors || ["main h1", "h1"];
     const candidates = [];
-    const preferDocumentTitle = Boolean(provider?.profile?.preferDocumentTitle);
+    const strategy = provider?.profile?.titleStrategy || (provider?.profile?.preferDocumentTitle ? "document-first" : "selectors-first");
 
     const documentTitle = normalizeTitleCandidate(document.title || "", provider);
-    if (documentTitle && preferDocumentTitle) {
+    if (documentTitle && (strategy === "document-first" || strategy === "document-only")) {
       candidates.push(documentTitle);
     }
 
-    for (const selector of selectors) {
-      const titleNode = document.querySelector(selector);
-      const text = normalizeTitleCandidate(titleNode?.textContent || "", provider);
-      if (text) {
-        candidates.push(text);
+    if (strategy !== "document-only") {
+      for (const selector of selectors) {
+        const titleNode = document.querySelector(selector);
+        const text = normalizeTitleCandidate(titleNode?.textContent || "", provider);
+        if (text) {
+          candidates.push(text);
+        }
       }
     }
 
-    if (documentTitle && !preferDocumentTitle) {
+    if (documentTitle && strategy === "selectors-first") {
       candidates.push(documentTitle);
     }
 
