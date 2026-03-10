@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import pathlib
+import subprocess
 import sys
 import urllib.error
 import urllib.request
@@ -32,6 +33,11 @@ class IconSpec:
 
 
 ICON_SPECS = (
+    IconSpec(
+        "kimi",
+        "https://moonshotai.github.io/Branding-Guide/scenarios/04-k-only/k-only-color.svg",
+        "kimi-logo.svg",
+    ),
     IconSpec(
         "chatgpt",
         "https://commons.wikimedia.org/wiki/Special:FilePath/ChatGPT-Logo.svg",
@@ -95,8 +101,18 @@ def fetch_svg(url: str) -> str:
         with urllib.request.urlopen(request, timeout=30) as response:
             content_type = response.headers.get("Content-Type", "")
             payload = response.read().decode("utf-8")
-    except urllib.error.URLError as error:
-        raise SystemExit(f"Failed to download {url}: {error}") from error
+    except urllib.error.URLError:
+        try:
+          completed = subprocess.run(
+              ["curl", "-fsSL", url],
+              check=True,
+              capture_output=True,
+              text=True,
+          )
+          content_type = "image/svg+xml"
+          payload = completed.stdout
+        except subprocess.CalledProcessError as error:
+          raise SystemExit(f"Failed to download {url}: {error}") from error
 
     if "<svg" not in payload:
         raise SystemExit(f"Unexpected response for {url}: not an SVG payload ({content_type})")

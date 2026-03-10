@@ -77,6 +77,7 @@ python3 scripts/sync_provider_icons.py --provider perplexity
 ```
 
 ### 当前平台状态（以 `ai_providers.js` 与手工验证为准）
+- Kimi：已接入（`kimi.com`），待继续回归验证
 - ChatGPT：已接入（`chatgpt.com`、`chat.openai.com`）
 - Claude：已接入（`claude.ai`），需继续回归验证
 - Gemini：已接入（`gemini.google.com`、`aistudio.google.com`）

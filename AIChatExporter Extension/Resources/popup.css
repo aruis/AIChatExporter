@@ -395,6 +395,11 @@ body.workbench-mode {
   border-color: transparent;
 }
 
+.eac-assistant-icon.provider-kimi.image-icon {
+  background: #1772f6;
+  border-color: rgba(23, 114, 246, 0.4);
+}
+
 .eac-assistant-icon.provider-perplexity.image-icon img {
   width: 20px;
   height: 20px;
