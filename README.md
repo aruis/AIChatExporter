@@ -20,7 +20,8 @@
 ## Provider 扩展（多 AI 平台）
 
 当前已将站点识别与页面结构配置抽象到：
-- `AIChatExporter Extension/Resources/ai_providers.js`
+- `AIChatExporter Extension/Resources/ai_providers.js`（注册表入口与默认配置）
+- `AIChatExporter Extension/Resources/providers/*.js`（各 provider 独立配置）
 
 内容提取逻辑已拆分为模块化层次：
 - `AIChatExporter Extension/Resources/content_runtime.js`（provider/runtime 基础能力）

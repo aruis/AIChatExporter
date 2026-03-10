@@ -21,6 +21,10 @@
     {
       "js": [
         "ai_providers.js",
+        "providers/chatgpt.js",
+        "providers/claude.js",
+        "providers/gemini.js",
+        "providers/perplexity.js",
         "content_runtime.js",
         "content_markdown_serializer.js",
         "content_extractors.js",
