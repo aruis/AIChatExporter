@@ -138,7 +138,7 @@
       urlPatterns: ["perplexity.ai", "www.perplexity.ai"],
       assistantIcon: {
         type: "image",
-        src: "images/providers/perplexity-logo.ico",
+        src: "images/providers/perplexity-logo.svg",
         alt: "Perplexity"
       },
       profile: {

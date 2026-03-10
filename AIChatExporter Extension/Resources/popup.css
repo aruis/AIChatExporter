@@ -390,6 +390,17 @@ body.workbench-mode {
   border-color: rgba(15, 118, 110, 0.45);
 }
 
+.eac-assistant-icon.provider-perplexity.image-icon {
+  background: transparent;
+  border-color: transparent;
+}
+
+.eac-assistant-icon.provider-perplexity.image-icon img {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+}
+
 .eac-bubble {
   border-radius: 14px;
   padding: 10px 12px;
