@@ -53,6 +53,75 @@
     return String(value || "").replace(/([\\`*_{}\[\]()#+\-.!|>])/g, "\\$1");
   }
 
+  function normalizeMathCopyText(value, preferBlock = false) {
+    const raw = String(value || "").trim();
+    if (!raw) {
+      return "";
+    }
+
+    const inlineMatched = raw.match(/^\\\(([\s\S]*)\\\)$/);
+    if (inlineMatched?.[1]) {
+      const body = inlineMatched[1].trim();
+      return preferBlock ? `$$${body}$$` : `$${body}$`;
+    }
+
+    const blockMatched = raw.match(/^\\\[([\s\S]*)\\\]$/);
+    if (blockMatched?.[1]) {
+      return `$$${blockMatched[1].trim()}$$`;
+    }
+
+    return preferBlock ? `$$${raw}$$` : raw;
+  }
+
+  function isKaTeXNode(node) {
+    return Boolean(node?.matches?.(".ybc-markdown-katex, .katex-display, .katex"));
+  }
+
+  function hasKaTeXMarkup(node) {
+    return isKaTeXNode(node)
+      || Boolean(node?.querySelector?.(".ybc-markdown-katex, .katex-display, .katex"));
+  }
+
+  function normalizeRenderedMathText(value) {
+    return String(value || "")
+      .replace(/\u200b/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function toMathMarkdown(node, preferBlock = false) {
+    const raw = node?.getAttribute?.("data-custom-copy-text") || "";
+    if (raw) {
+      return normalizeMathCopyText(raw, preferBlock);
+    }
+
+    const rendered = normalizeRenderedMathText(node?.textContent || "");
+    if (!rendered) {
+      return "";
+    }
+    return preferBlock ? `$$${rendered}$$` : `$${rendered}$`;
+  }
+
+  function isStandaloneMathBlock(node) {
+    if (!(node instanceof Element)) {
+      return false;
+    }
+
+    const meaningfulChildren = [...node.childNodes].filter((child) => {
+      if (child.nodeType === Node.TEXT_NODE) {
+        return Boolean(String(child.textContent || "").trim());
+      }
+      if (child.nodeType !== Node.ELEMENT_NODE) {
+        return false;
+      }
+      return true;
+    });
+
+    return meaningfulChildren.length === 1
+      && meaningfulChildren[0].nodeType === Node.ELEMENT_NODE
+      && meaningfulChildren[0].getAttribute?.("data-custom-copy-text");
+  }
+
   function toInlineMarkdown(node) {
     if (!node) {
       return "";
@@ -68,6 +137,12 @@
 
     const el = node;
     const tag = el.tagName.toLowerCase();
+    if (el.hasAttribute("data-custom-copy-text")) {
+      return toMathMarkdown(el, false);
+    }
+    if (isKaTeXNode(el)) {
+      return toMathMarkdown(el, false);
+    }
     if (tag === "br") {
       return "\n";
     }
@@ -209,6 +284,16 @@
     return blocks.join("\n\n");
   }
 
+  function hasBlockDescendants(el) {
+    return [...el.children].some((child) => {
+      const childTag = child.tagName.toLowerCase();
+      if (["p", "pre", "ul", "ol", "blockquote", "table", "hr"].includes(childTag) || /^h[1-6]$/.test(childTag)) {
+        return true;
+      }
+      return child.querySelector("p, pre, ul, ol, blockquote, table, hr, h1, h2, h3, h4, h5, h6");
+    });
+  }
+
   function toBlockMarkdown(node) {
     if (node.nodeType === Node.TEXT_NODE) {
       return mergeInlineText(node);
@@ -219,6 +304,15 @@
 
     const el = node;
     const tag = el.tagName.toLowerCase();
+    if (el.hasAttribute("data-custom-copy-text")) {
+      return toMathMarkdown(el, isStandaloneMathBlock(el.parentElement));
+    }
+    if (tag === "pre" && hasKaTeXMarkup(el)) {
+      return toMathMarkdown(el, true);
+    }
+    if (isKaTeXNode(el) && !el.querySelector?.("pre")) {
+      return toMathMarkdown(el, isStandaloneMathBlock(el.parentElement) || el.matches?.(".katex-display"));
+    }
 
     if (tag === "pre") {
       return toFencedCode(el).trim();
@@ -245,13 +339,16 @@
       return "---";
     }
     if (tag === "p") {
+      if (isStandaloneMathBlock(el)) {
+        return toMathMarkdown(el.firstElementChild, true);
+      }
       return mergeInlineText(el);
     }
+    if (isStandaloneMathBlock(el)) {
+      return toMathMarkdown(el.firstElementChild, true);
+    }
 
-    const hasBlockChildren = [...el.children].some((child) => {
-      const childTag = child.tagName.toLowerCase();
-      return ["p", "pre", "ul", "ol", "blockquote", "table", "hr"].includes(childTag) || /^h[1-6]$/.test(childTag);
-    });
+    const hasBlockChildren = hasBlockDescendants(el);
     return hasBlockChildren ? serializeChildrenMarkdown(el) : mergeInlineText(el);
   }
 
@@ -259,6 +356,18 @@
     const contentNode = getPrimaryContentNode(root, provider);
     const clone = contentNode.cloneNode(true);
     clone.querySelectorAll("button, nav, svg, script, style").forEach((el) => el.remove());
+    clone.querySelectorAll("pre").forEach((pre) => {
+      let current = pre;
+      while (current && current.parentElement && current.parentElement !== clone) {
+        const container = current.parentElement;
+        [...container.children].forEach((child) => {
+          if (child !== current && !child.contains(current)) {
+            child.remove();
+          }
+        });
+        current = container;
+      }
+    });
 
     if (clone.matches?.(".whitespace-pre-wrap") && !clone.querySelector("p,ul,ol,table,blockquote,pre")) {
       return runtime.cleanText(clone.innerText || clone.textContent || "");
