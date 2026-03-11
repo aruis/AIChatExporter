@@ -226,7 +226,7 @@
     }
 
     return {
-      title: runtime.detectTitle(provider),
+      title: runtime.detectTitle(provider, normalizedMessages),
       messages: toSerializableMessages(normalizedMessages),
       providerId: provider.id,
       providerName: provider.name

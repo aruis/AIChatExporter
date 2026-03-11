@@ -67,7 +67,28 @@
     return genericTitles.has(normalized);
   }
 
-  function detectTitle(provider) {
+  function buildTitleFromMessages(provider, messages) {
+    const fallbackStrategy = provider?.profile?.titleFallback;
+    if (fallbackStrategy !== "first-user-message" && fallbackStrategy !== "first-message") {
+      return "";
+    }
+
+    const preferredRole = fallbackStrategy === "first-user-message" ? "user" : null;
+    const match = (messages || []).find((item) => {
+      const text = normalizeTitleCandidate(item?.text || "", provider);
+      if (!text) {
+        return false;
+      }
+      if (preferredRole && item?.role !== preferredRole) {
+        return false;
+      }
+      return true;
+    });
+
+    return sanitizeFilenamePart(normalizeTitleCandidate(match?.text || "", provider));
+  }
+
+  function detectTitle(provider, messages = []) {
     const selectors = provider?.profile?.titleSelectors || ["main h1", "h1"];
     const candidates = [];
     const strategy = provider?.profile?.titleStrategy || (provider?.profile?.preferDocumentTitle ? "document-first" : "selectors-first");
@@ -93,6 +114,7 @@
 
     const bestCandidate = candidates.find((text) => !isGenericTitle(text, provider))
       || candidates[0]
+      || buildTitleFromMessages(provider, messages)
       || "chat";
 
     return sanitizeFilenamePart(bestCandidate) || "chat";

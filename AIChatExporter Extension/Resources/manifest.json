@@ -21,11 +21,13 @@
     {
       "js": [
         "ai_providers.js",
-        "kimi.js",
-        "chatgpt.js",
-        "claude.js",
-        "gemini.js",
-        "perplexity.js",
+        "providers/doubao.js",
+        "providers/kimi.js",
+        "providers/chatgpt.js",
+        "providers/claude.js",
+        "providers/gemini.js",
+        "providers/perplexity.js",
+        "providers/yuanbao.js",
         "content_runtime.js",
         "content_markdown_serializer.js",
         "content_extractors.js",

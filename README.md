@@ -54,6 +54,37 @@
 - 按 provider 的选择器提取标题、消息节点与正文节点
 - 按 provider 的角色属性识别 `user/assistant/tool`
 
+### 页面实测回归流程
+
+当静态看代码不足以判断 DOM 结构时，优先走“浏览器驱动 + 人工协作”的页面实测流程：
+
+1. 用浏览器驱动工具打开目标站点聊天页，停在登录或会话页。
+2. 如站点需要登录，由人工完成登录、二次验证、权限确认等交互。
+3. 人工在目标站点发起一段真实对话，优先覆盖待验证内容类型：
+   - 普通问答
+   - 代码块
+   - 表格
+   - 引用
+   - 数学公式
+4. 通过页面脚本读取真实 DOM，确认：
+   - 标题候选是否会误命中侧边栏历史会话
+   - `user/assistant` 消息根节点是否稳定
+   - 正文节点是否混入工具栏、语言标签、复制按钮等 UI 噪音
+   - 特殊内容是否有可直接复用的结构化来源，如 `pre > code`、`table`、`blockquote`、`data-custom-copy-text`
+5. 先最小化修改：
+   - 结构稳定时，仅改 `AIChatExporter Extension/Resources/providers/*.js`
+   - 若是跨平台共性问题，再改 `content_markdown_serializer.js` 或 `content_runtime.js`
+6. 修改后必须回到同一真实页面复跑，对照 DOM 与提取结果，确认没有把 UI 文案、历史标题或渲染后的视觉文本误收进 Markdown。
+7. 将结论记录到 README，至少写清：
+   - 验证站点
+   - 覆盖内容类型
+   - 已确认有效的选择器/提取策略
+   - 仍未覆盖的风险点
+
+补充约定：
+- 标题优先取当前会话上下文，拿不到时再回退到首条用户消息，避免误取历史会话标题。
+- 对代码块、公式这类“视觉渲染”和“原始语义”可能不一致的内容，优先提取原始语义来源，不直接依赖页面渲染文本。
+
 ### Provider 图标维护
 
 provider 图标统一落本地资源目录：
@@ -77,6 +108,8 @@ python3 scripts/sync_provider_icons.py --provider perplexity
 ```
 
 ### 当前平台状态（以 `ai_providers.js` 与手工验证为准）
+- 豆包：已接入（`doubao.com`）；已实测验证标题回退、代码块、表格、引用、公式提取
+- 元宝：已接入（`yuanbao.tencent.com`）；已实测验证标题、基础问答、代码块、表格、引用提取；公式当前为可读 fallback，未达到 LaTeX 级保真
 - Kimi：已接入（`kimi.com`），待继续回归验证
 - ChatGPT：已接入（`chatgpt.com`、`chat.openai.com`）
 - Claude：已接入（`claude.ai`），需继续回归验证
