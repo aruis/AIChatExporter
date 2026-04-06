@@ -7,7 +7,6 @@
 .bundle/
 vendor/bundle/
 
-
 # Local generated assets / temp files
 output/
 tmp/
