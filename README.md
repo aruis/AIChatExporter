@@ -1,239 +1,101 @@
 # AI Chat Exporter
 
-一个 Safari 插件（Safari Web Extension）项目，用于将当前 AI 对话导出为多种格式，方便归档、分享与离线阅读。
+一个用于 Safari 的聊天导出扩展，面向常见 AI 对话网页，支持把当前会话导出为便于归档和分享的文件格式。
 
-## 项目说明（简短）
+## 功能
 
-### 目标
-在 AI 对话页面中，一键导出当前会话为：
-- 长截图（PNG）
-- PDF
-- Markdown（`.md`）
+- 导出当前会话为 Markdown
+- 通过排版工作台导出 PNG / PDF
+- 尽量保留角色顺序、代码块、列表、表格、引用等结构
+- 基于 provider 配置适配多站点 DOM 结构
 
-### 预期体验
-- 在插件弹窗中一键导出 Markdown，或打开“排版导出工作台”导出 PNG/PDF
-- 导出内容尽量还原对话结构（角色、顺序、代码块、列表等）
-- 支持中文/英文常见内容场景
+## 当前支持
 
-## 开发任务计划
+- ChatGPT
+- Claude
+- Gemini
+- Perplexity
+- Kimi
+- 豆包
+- 元宝
 
-## Provider 扩展（多 AI 平台）
+不同站点的页面结构变化较快，兼容性以实际回归结果为准。
 
-当前已将站点识别与页面结构配置抽象到：
-- `AIChatExporter Extension/Resources/ai_providers.js`（注册表入口与默认配置）
-- `AIChatExporter Extension/Resources/providers/*.js`（各 provider 独立配置）
+## 项目结构
 
-内容提取逻辑已拆分为模块化层次：
-- `AIChatExporter Extension/Resources/content_runtime.js`（provider/runtime 基础能力）
-- `AIChatExporter Extension/Resources/content_markdown_serializer.js`（DOM -> Markdown 序列化）
-- `AIChatExporter Extension/Resources/content_extractors.js`（消息提取与 Markdown 组装）
-- `AIChatExporter Extension/Resources/content.js`（消息路由与导出编排）
+- `AIChatExporter Extension/Resources/ai_providers.js`
+  provider 注册表与默认配置
+- `AIChatExporter Extension/Resources/providers/*.js`
+  各站点选择器与提取配置
+- `AIChatExporter Extension/Resources/content_runtime.js`
+  provider 识别、标题与通用运行时逻辑
+- `AIChatExporter Extension/Resources/content_markdown_serializer.js`
+  DOM 到 Markdown 的序列化
+- `AIChatExporter Extension/Resources/content_extractors.js`
+  消息根节点提取与对话组装
+- `AIChatExporter Extension/Resources/content.js`
+  页面侧导出入口
+- `AIChatExporter Extension/Resources/popup.js`
+  扩展弹窗与工作台交互
 
-新增平台时，优先只改 provider 配置：
-1. 在 `PROVIDERS` 追加 `{ id, name, urlPatterns, profile }`
-2. 若 DOM 结构接近现有平台，仅补 `profile.messageRootSelectors`、`profile.contentRootSelectors`
-3. 若需要特殊策略，再在 `content.js` 增加 provider-specific 逻辑（尽量少）
+## 本地开发
 
-推荐优先使用的 profile 字段：
-- `titleStrategy`
-  - `selectors-first`
-  - `document-first`
-  - `document-only`
-- `titleSelectors`
-- `userMessageSelectors`
-- `assistantMessageSelectors`
-- `messageRootSelectors`
-  - 当 user / assistant 无法稳定拆开时再用
-- `contentRootSelectors`
-- `roleAttributes`
-- `roleSelectors`
-- `userRoleHints`
+### 运行
 
-当前默认策略已经支持：
-- 按 URL 自动匹配 provider
-- 按 provider 的选择器提取标题、消息节点与正文节点
-- 按 provider 的角色属性识别 `user/assistant/tool`
+1. 用 Xcode 打开 `AIChatExporter.xcodeproj`
+2. 运行宿主 App `AIChatExporter`
+3. 在 Safari 开启开发者模式并启用扩展
+4. 打开目标聊天页面进行调试
 
-### 页面实测回归流程
+### 构建
 
-当静态看代码不足以判断 DOM 结构时，优先走“浏览器驱动 + 人工协作”的页面实测流程：
-
-1. 用浏览器驱动工具打开目标站点聊天页，停在登录或会话页。
-2. 如站点需要登录，由人工完成登录、二次验证、权限确认等交互。
-3. 人工在目标站点发起一段真实对话，优先覆盖待验证内容类型：
-   - 普通问答
-   - 代码块
-   - 表格
-   - 引用
-   - 数学公式
-4. 通过页面脚本读取真实 DOM，确认：
-   - 标题候选是否会误命中侧边栏历史会话
-   - `user/assistant` 消息根节点是否稳定
-   - 正文节点是否混入工具栏、语言标签、复制按钮等 UI 噪音
-   - 特殊内容是否有可直接复用的结构化来源，如 `pre > code`、`table`、`blockquote`、`data-custom-copy-text`
-5. 先最小化修改：
-   - 结构稳定时，仅改 `AIChatExporter Extension/Resources/providers/*.js`
-   - 若是跨平台共性问题，再改 `content_markdown_serializer.js` 或 `content_runtime.js`
-6. 修改后必须回到同一真实页面复跑，对照 DOM 与提取结果，确认没有把 UI 文案、历史标题或渲染后的视觉文本误收进 Markdown。
-7. 将结论记录到 README，至少写清：
-   - 验证站点
-   - 覆盖内容类型
-   - 已确认有效的选择器/提取策略
-   - 仍未覆盖的风险点
-
-补充约定：
-- 标题优先取当前会话上下文，拿不到时再回退到首条用户消息，避免误取历史会话标题。
-- 对代码块、公式这类“视觉渲染”和“原始语义”可能不一致的内容，优先提取原始语义来源，不直接依赖页面渲染文本。
-
-### Provider 图标维护
-
-provider 图标统一落本地资源目录：
-- `AIChatExporter Extension/Resources/images/providers/`
-
-同步脚本：
-- `scripts/sync_provider_icons.py`
-
-用途：
-- 从社区维护的品牌资源拉取 SVG
-- 保持扩展继续使用本地静态资源，不依赖运行时 CDN
-
-执行方式：
 ```bash
-python3 scripts/sync_provider_icons.py
+xcodebuild -scheme AIChatExporter -project AIChatExporter.xcodeproj -configuration Debug -sdk macosx build CODE_SIGNING_ALLOWED=NO
 ```
 
-仅同步单个 provider：
-```bash
-python3 scripts/sync_provider_icons.py --provider perplexity
-```
+## 添加新站点
 
-### 当前平台状态（以 `ai_providers.js` 与手工验证为准）
-- 豆包：已接入（`doubao.com`）；已实测验证标题回退、代码块、表格、引用、公式提取
-- 元宝：已接入（`yuanbao.tencent.com`）；已实测验证标题、基础问答、代码块、表格、引用提取；公式当前为可读 fallback，未达到 LaTeX 级保真
-- Kimi：已接入（`kimi.com`），待继续回归验证
-- ChatGPT：已接入（`chatgpt.com`、`chat.openai.com`）
-- Claude：已接入（`claude.ai`），需继续回归验证
-- Gemini：已接入（`gemini.google.com`、`aistudio.google.com`）
-- Perplexity：已验证可用（`perplexity.ai`、`www.perplexity.ai`）
+优先只新增或修改 provider 配置：
 
-## 当前进度（2026-03-01）
-- 已完成：Popup 双路径入口（Markdown 一键导出 + 排版导出工作台）
-- 已完成：Markdown 导出（可直接下载 `.md`）
-- 已完成：导出工作台页（所见即所得预览）
-- 已完成：3 套对话框样式 + 3 套背景样式（PNG/PDF 共用配置）
-- 已完成：PNG 导出（基于工作台预览舞台滚动拼接）
-- 已完成：PDF 最小可用（工作台预览舞台 + 打印面板存储为 PDF）
-- 已完成：样式偏好记忆（记住上次选择）
-- 进行中：工作台导出稳定性回归（不同尺寸/缩放/超长会话）
+1. 在 `AIChatExporter Extension/Resources/providers/` 新增对应文件
+2. 注册 `{ id, name, urlPatterns, profile }`
+3. 优先补这些字段：
+   - `titleSelectors`
+   - `userMessageSelectors`
+   - `assistantMessageSelectors`
+   - `messageRootSelectors`
+   - `contentRootSelectors`
+   - `roleAttributes`
+   - `roleSelectors`
+4. 只有在通用逻辑无法覆盖时，再改提取器或序列化器
 
-### 阶段 1：需求与技术验证
-- 明确“当前对话”的 DOM 范围与选择器策略
-- 验证三种导出路径的可行性：截图、PDF、Markdown
-- 定义最小可用版本（MVP）功能边界
+## 回归建议
 
-### 阶段 2：核心能力开发（MVP）
-- 提取对话数据（消息角色、文本、代码块、时间顺序）
-- 实现 Markdown 导出（基础格式、代码块保真）
-- 实现长截图导出（滚动拼接或整页渲染方案）
-- 实现 PDF 导出（基于渲染结果或打印能力）
+页面结构排查建议优先覆盖这些内容类型：
 
-### 阶段 3：插件交互与文件输出
-- 完成 popup 界面：格式选择、导出按钮、状态提示
-- 串联 content/background/popup 通信流程
-- 处理文件命名、下载触发、异常提示
+- 普通问答
+- 代码块
+- 表格
+- 引用
+- 数学公式
 
-### 阶段 4：兼容性与质量
-- 适配不同对话长度（短会话/超长会话）
-- 检查代码块、表格、数学公式等内容在各格式中的表现
-- 进行 Safari 端自测与回归测试，修复稳定性问题
+验证时重点确认：
 
-### 阶段 5：发布准备
-- 完善权限说明与隐私说明
-- 优化图标、文案与错误提示
-- 补充使用说明与演示截图
+- 标题不会误取侧边栏历史会话
+- `user` / `assistant` 根节点稳定
+- 正文不会混入工具栏、复制按钮或提示文案
+- 代码块和公式尽量使用原始语义来源而不是渲染文本
 
-## MVP 验收标准（建议）
-- 能稳定导出当前页面完整可见对话
-- 三种格式均可成功生成并下载
-- Markdown 中代码块与段落结构清晰可读
-- 长会话导出失败率可接受，且有明确错误提示
+## 隐私与仓库约定
 
-## 下一步（短期）
-- 做新导出舞台稳定性回归：不同窗口尺寸、不同缩放比例、超长会话
-- 提升 Markdown 保真度：列表/表格/引用/公式
-- 评估 PDF 程序化导出（替代打印面板）
+- 仓库不提交真实密钥、令牌、私钥或发布账号配置
+- 发布侧配置应放在本地环境变量或本地忽略文件中
 
-## Logo 生成（国内供应商适配）
+## 贡献
 
-项目新增脚本：`scripts/logo_provider_adapter.py`  
-用途：通过“OpenAI 兼容图片生成接口”统一生成 Logo，可对接国内供应商。
+欢迎提交 issue 和 PR，尤其是：
 
-### 1) 通义（Qwen 兼容模式）
-```bash
-export DASHSCOPE_API_KEY='your_key'
-export DASHSCOPE_BASE_URL='https://your-compatible-endpoint/v1'
-export DASHSCOPE_IMAGE_MODEL='your_image_model'
-
-python3 scripts/logo_provider_adapter.py \
-  --provider qwen \
-  --n 4 \
-  --out-dir output/imagegen
-```
-
-### 2) 豆包/Ark（兼容模式）
-```bash
-export ARK_API_KEY='your_key'
-# 可不设置，默认就是官方：
-# https://ark.cn-beijing.volces.com
-export ARK_BASE_URL='https://ark.cn-beijing.volces.com'
-export ARK_IMAGE_MODEL='doubao-seedream-5-0-260128'
-
-python3 scripts/logo_provider_adapter.py \
-  --provider doubao \
-  --size 2K \
-  --response-format url \
-  --sequential-image-generation disabled \
-  --stream false \
-  --watermark true \
-  --n 4 \
-  --out-dir output/imagegen
-```
-
-### 3) 自定义兼容供应商
-```bash
-export IMAGE_API_KEY='your_key'
-export IMAGE_API_BASE_URL='https://your-compatible-endpoint/v1'
-export IMAGE_API_MODEL='your_image_model'
-
-python3 scripts/logo_provider_adapter.py \
-  --provider compatible \
-  --prompt "Design a modern minimal app logo for AIChatExporter" \
-  --n 4
-```
-
-### 说明
-- `doubao` 模式默认请求路径：`https://ark.cn-beijing.volces.com/api/v3/images/generations`
-- 其它兼容模式默认请求路径：`{BASE_URL}/images/generations`
-- 输出默认写入：`output/imagegen/`
-- 可先用 `--dry-run` 检查请求体，不发网络请求
-- 如某供应商字段和 OpenAI 兼容协议不一致，需要按该供应商文档微调脚本
-
-
-已内置最小可用配置：
-
-### 初始化
-```bash
-bundle install
-```
-
-### 从 ASC 拉取现有文案
-```bash
-```
-
-### 上传本地文案到 ASC（不上传二进制）
-```bash
-```
-
-说明：
-- 当前配置绑定 `app_identifier: net.ximatai.aichatexporter`
-- `apple_id: ASC_APPLE_ID`
+- 新 provider 接入
+- 现有站点 DOM 变更兼容
+- Markdown / PNG / PDF 保真度改进
+- Safari 兼容性与稳定性修复

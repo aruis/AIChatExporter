@@ -1,4 +1,8 @@
 
+# Local environment files
+.env
+.env.*
+
 # Bundler local environment
 .bundle/
 vendor/bundle/
